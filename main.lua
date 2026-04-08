@@ -17,7 +17,7 @@ local player = {
     width = 32,
     height = 32,
     speed = 250,
-    jumpForce = 400,
+    jumpForce = 600,
     velocityX = 0,
     velocityY = 0,
     grounded = false,
@@ -25,7 +25,9 @@ local player = {
     facingY = 0,
     invulnerable = false,
     invulnerableTimer = 0,
-    maxHealth = 100
+    maxHealth = 100,
+    jumpsRemaining = 2,
+    maxJumps = 2
 }
 
 local platforms = {}
@@ -158,9 +160,12 @@ function love.update(dt)
     
     player.velocityX = dx * player.speed
     
-    if (love.keyboard.isDown("up") or love.keyboard.isDown("w") or love.keyboard.isDown("space")) and player.grounded then
+    if (love.keyboard.isDown("up") or love.keyboard.isDown("w") or love.keyboard.isDown("space")) and player.jumpsRemaining > 0 then
         player.velocityY = -player.jumpForce
-        player.grounded = false
+        player.jumpsRemaining = player.jumpsRemaining - 1
+        if player.grounded then
+            player.grounded = false
+        end
         sound.jump()
     end
     
@@ -201,6 +206,7 @@ function love.update(dt)
                 player.y = platform.y - player.height
                 player.velocityY = 0
                 player.grounded = true
+                player.jumpsRemaining = player.maxJumps
             end
         end
     end

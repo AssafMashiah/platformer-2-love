@@ -126,6 +126,7 @@ function EnemySystem:generateEnemy(x, y, forceType)
         projectileSpeed = enemyData.projectileSpeed or 300,
         jumpHeight = enemyData.jumpHeight or 150,
         chargeCooldown = enemyData.chargeCooldown or 3,
+        chargeSpeed = enemyData.chargeSpeed or 180,
         chargeTimer = 0,
         isCharging = false,
         phaseThrough = enemyData.phaseThrough or false,
@@ -262,7 +263,9 @@ function EnemySystem:updateChase(enemy, dt, player, playerDist)
         local dirX = (player.x - enemy.x) / playerDist
         local dirY = (player.y - enemy.y) / playerDist
         
-        if enemy.isCharging then
+        local canCharge = enemy.chargeSpeed and enemy.chargeSpeed > 0
+        
+        if canCharge and enemy.isCharging then
             enemy.velocityX = dirX * enemy.chargeSpeed
             enemy.velocityY = dirY * enemy.chargeSpeed
             enemy.chargeTimer = enemy.chargeTimer - dt
@@ -274,10 +277,11 @@ function EnemySystem:updateChase(enemy, dt, player, playerDist)
         else
             enemy.velocityX = dirX * enemy.speed
             enemy.velocityY = dirY * enemy.speed * 0.5
-            enemy.chargeTimer = enemy.chargeTimer - dt
-            
-            if enemy.chargeTimer <= 0 and playerDist < 150 then
-                enemy.isCharging = true
+            if canCharge then
+                enemy.chargeTimer = enemy.chargeTimer - dt
+                if enemy.chargeTimer <= 0 and playerDist < 150 then
+                    enemy.isCharging = true
+                end
             end
         end
     else
