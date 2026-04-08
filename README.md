@@ -77,12 +77,28 @@ platformer/
 ├── projectile.lua # Enhanced projectile system
 ├── hud.lua        # Heads-up display and menus
 ├── sound.lua      # Procedural sound effects
+├── conf.lua       # LÖVE configuration
+├── web/           # Web deployment files
+├── .github/
+│   └── workflows/
+│       └── web.yml # GitHub Actions web build workflow
 └── README.md      # This file
 ```
 
-## Browser Support
+## Web Deployment
 
-LÖVE2D games cannot run natively in a web browser. However, there are options for browser deployment:
+This project uses GitHub Actions to automatically build and deploy the game to GitHub Pages.
+
+### CI/CD Pipeline
+
+The `.github/workflows/web.yml` workflow:
+1. Builds the game into a `.love` file
+2. Converts it to web using [love.js](https://github.com/Davidobot/love.js)
+3. Deploys to GitHub Pages
+
+### Play Online (GitHub Pages)
+
+The game is automatically deployed to GitHub Pages on every push to main. Visit the repository's GitHub Pages URL to play directly in your browser.
 
 ### Option 1: Upload to LÖVE2D Play (Simplest)
 
@@ -95,11 +111,17 @@ LÖVE2D games cannot run natively in a web browser. However, there are options f
 zip game.zip *.lua && mv game.zip game.love
 ```
 
-### Option 2: WebLove (WebAssembly Port)
+### Option 2: Build Web Version Locally
 
-WebLove is a WebAssembly port of LÖVE2D that runs in browsers. This requires more complex setup but allows self-hosted deployment.
+You can build the web version yourself using [love.js](https://github.com/Davidobot/love.js):
 
-For more information, visit the [WebLove project](https://github.com/TannerGilbert/LÖVE-WASM).
+```bash
+npm install -g love.js
+zip game.zip *.lua conf.lua && mv game.zip game.love
+love.js game.love web-build -t "Platformer" -c
+cd web-build && python -m http.server 8000
+# Open localhost:8000 in your browser
+```
 
 ## Tips
 - Stay mobile! Enemies will chase you
