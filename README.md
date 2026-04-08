@@ -80,6 +80,27 @@ platformer/
 └── README.md      # This file
 ```
 
+## Browser Support
+
+LÖVE2D games cannot run natively in a web browser. However, there are options for browser deployment:
+
+### Option 1: Upload to LÖVE2D Play (Simplest)
+
+1. Create a `.love` file from your game files
+2. Upload it to [https://love2d.org/play](https://love2d.org/play)
+3. Share the generated URL with others
+
+**Creating a .love file:**
+```bash
+zip game.zip *.lua && mv game.zip game.love
+```
+
+### Option 2: WebLove (WebAssembly Port)
+
+WebLove is a WebAssembly port of LÖVE2D that runs in browsers. This requires more complex setup but allows self-hosted deployment.
+
+For more information, visit the [WebLove project](https://github.com/TannerGilbert/LÖVE-WASM).
+
 ## Tips
 - Stay mobile! Enemies will chase you
 - Platform height matters - use it to your advantage
