@@ -159,6 +159,7 @@ function ProjectileSystem:fireAtPoint(config)
 end
 
 function ProjectileSystem:update(dt)
+    local deadProjectiles = {}
     for i = #self.projectiles, 1, -1 do
         local proj = self.projectiles[i]
         
@@ -182,8 +183,12 @@ function ProjectileSystem:update(dt)
            proj.x < -50 or proj.x > self.screenWidth + 50 or 
            proj.y < -50 or proj.y > self.screenHeight + 50 or
            proj.hitsRemaining <= 0 then
-            table.remove(self.projectiles, i)
+            table.insert(deadProjectiles, i)
         end
+    end
+    
+    for _, idx in ipairs(deadProjectiles) do
+        table.remove(self.projectiles, idx)
     end
 end
 
@@ -193,18 +198,18 @@ function ProjectileSystem:checkCollisionWithRect(targetX, targetY, targetWidth, 
     for i = #self.projectiles, 1, -1 do
         local proj = self.projectiles[i]
         
-        if proj.owner == owner then continue end
-        
-        if self:rectsCollide(proj.x - proj.size, proj.y - proj.size,
-                            proj.size * 2, proj.size * 2,
-                            targetX, targetY, targetWidth, targetHeight) then
-            table.insert(hitProjectiles, {
-                projectile = proj,
-                index = i,
-                damage = proj.damage
-            })
-            
-            proj.hitsRemaining = proj.hitsRemaining - 1
+        if proj.owner ~= owner then
+            if self:rectsCollide(proj.x - proj.size, proj.y - proj.size,
+                                proj.size * 2, proj.size * 2,
+                                targetX, targetY, targetWidth, targetHeight) then
+                table.insert(hitProjectiles, {
+                    projectile = proj,
+                    index = i,
+                    damage = proj.damage
+                })
+                
+                proj.hitsRemaining = proj.hitsRemaining - 1
+            end
         end
     end
     
@@ -226,28 +231,26 @@ function ProjectileSystem:checkPlayerProjectilesVsEnemies(enemies)
     local enemiesHit = {}
     local totalScore = 0
     
-    for i = #self.projectiles, 1, -1 do
-        local proj = self.projectiles[i]
-        
-        if not proj.isPlayerOwned then continue end
-        
-        for _, enemy in ipairs(enemies) do
-            if not enemy.alive then continue end
-            
-            local enemyWidth = enemy.width or (enemy.size and enemy.size * 2) or 32
-            local enemyHeight = enemy.height or (enemy.size and enemy.size * 2) or 32
-            
-            if self:rectsCollide(proj.x - proj.size, proj.y - proj.size,
-                                proj.size * 2, proj.size * 2,
-                                enemy.x, enemy.y, enemyWidth, enemyHeight) then
-                
-                if not enemiesHit[enemy] then
-                    enemiesHit[enemy] = 0
-                end
-                enemiesHit[enemy] = enemiesHit[enemy] + proj.damage
-                
-                if not proj.piercing then
-                    proj.hitsRemaining = 0
+    for _, proj in ipairs(self.projectiles) do
+        if proj.isPlayerOwned then
+            for _, enemy in ipairs(enemies) do
+                if enemy.alive then
+                    local enemyWidth = enemy.width or (enemy.size and enemy.size * 2) or 32
+                    local enemyHeight = enemy.height or (enemy.size and enemy.size * 2) or 32
+                    
+                    if self:rectsCollide(proj.x - proj.size, proj.y - proj.size,
+                                        proj.size * 2, proj.size * 2,
+                                        enemy.x, enemy.y, enemyWidth, enemyHeight) then
+                        
+                        if not enemiesHit[enemy] then
+                            enemiesHit[enemy] = 0
+                        end
+                        enemiesHit[enemy] = enemiesHit[enemy] + proj.damage
+                        
+                        if not proj.piercing then
+                            proj.hitsRemaining = 0
+                        end
+                    end
                 end
             end
         end
@@ -267,16 +270,14 @@ end
 function ProjectileSystem:checkEnemyProjectilesVsPlayer(player)
     local damageTaken = 0
     
-    for i = #self.projectiles, 1, -1 do
-        local proj = self.projectiles[i]
-        
-        if proj.isPlayerOwned then continue end
-        
-        if self:rectsCollide(proj.x - proj.size, proj.y - proj.size,
-                            proj.size * 2, proj.size * 2,
-                            player.x, player.y, player.width or 32, player.height or 32) then
-            damageTaken = damageTaken + proj.damage
-            proj.hitsRemaining = 0
+    for _, proj in ipairs(self.projectiles) do
+        if not proj.isPlayerOwned then
+            if self:rectsCollide(proj.x - proj.size, proj.y - proj.size,
+                                proj.size * 2, proj.size * 2,
+                                player.x, player.y, player.width or 32, player.height or 32) then
+                damageTaken = damageTaken + proj.damage
+                proj.hitsRemaining = 0
+            end
         end
     end
     
