@@ -77,8 +77,12 @@ platformer/
 ├── projectile.lua # Enhanced projectile system
 ├── hud.lua        # Heads-up display and menus
 ├── sound.lua      # Procedural sound effects
+├── conf.lua       # LÖVE2D configuration
+├── SPEC.md        # Technical specification
 └── README.md      # This file
 ```
+
+## Contributing
 
 ## Browser Support
 
@@ -100,6 +104,10 @@ zip game.zip *.lua && mv game.zip game.love
 WebLove is a WebAssembly port of LÖVE2D that runs in browsers. This requires more complex setup but allows self-hosted deployment.
 
 For more information, visit the [WebLove project](https://github.com/TannerGilbert/LÖVE-WASM).
+
+## Contributing
+
+See [AGENTS.md](AGENTS.md) for agent workflow and documentation standards. All contributors should maintain SPEC.md and README.md when modifying game systems.
 
 ## Tips
 - Stay mobile! Enemies will chase you
