@@ -78,7 +78,19 @@ function EnemySystem:new()
     instance.screenWidth = 800
     instance.screenHeight = 600
     instance.difficulty = 1
+    instance.levelStart = 0
+    instance.levelEnd = 4000
+    instance.cameraX = 0
     return instance
+end
+
+function EnemySystem:setLevelBounds(start, levelEnd)
+    self.levelStart = start
+    self.levelEnd = levelEnd
+end
+
+function EnemySystem:setCameraX(camX)
+    self.cameraX = camX
 end
 
 function EnemySystem:generateEnemy(x, y, forceType)
@@ -439,42 +451,47 @@ function EnemySystem:setScreenSize(width, height)
 end
 
 function EnemySystem:draw()
+    local camX = self.cameraX
     for _, enemy in ipairs(self.enemies) do
         if enemy.alive and (not enemy.phaseThrough or enemy.isVisible) then
+            local screenX = enemy.x - camX
+            if screenX + enemy.width < -100 or screenX > self.screenWidth + 100 then
+                goto continue
+            end
             local alpha = enemy.phaseThrough and 0.7 or 1.0
             
             love.graphics.setColor(0, 0, 0, alpha * 0.4)
-            love.graphics.ellipse("fill", enemy.x + enemy.width / 2 + 3, 
+            love.graphics.ellipse("fill", screenX + enemy.width / 2 + 3, 
                                    enemy.y + enemy.height + 5, 
                                    enemy.width / 2, 5)
             
             love.graphics.setColor(enemy.color[1] * 0.5, enemy.color[2] * 0.5, enemy.color[3] * 0.5, alpha)
-            love.graphics.ellipse("fill", enemy.x + enemy.width / 2, 
+            love.graphics.ellipse("fill", screenX + enemy.width / 2, 
                                   enemy.y + enemy.height, 
                                   enemy.width / 2 + 4, 8)
             
             love.graphics.setColor(enemy.color[1], enemy.color[2], enemy.color[3], alpha)
-            love.graphics.ellipse("fill", enemy.x + enemy.width / 2, 
+            love.graphics.ellipse("fill", screenX + enemy.width / 2, 
                                   enemy.y + enemy.height / 2 + 5, 
                                   enemy.width / 2, enemy.height / 2)
             
             love.graphics.setColor(math.min(1, enemy.color[1] + 0.2), 
                                    math.min(1, enemy.color[2] + 0.2), 
                                    math.min(1, enemy.color[3] + 0.2), alpha)
-            love.graphics.ellipse("fill", enemy.x + enemy.width / 2, 
+            love.graphics.ellipse("fill", screenX + enemy.width / 2, 
                                   enemy.y + enemy.height / 2 - 5, 
                                   enemy.width / 3, enemy.height / 3)
             
             if enemy.behavior == "shoot" then
                 love.graphics.setColor(1, 0.3, 0.3, alpha)
-                love.graphics.circle("fill", enemy.x + enemy.width / 2, 
+                love.graphics.circle("fill", screenX + enemy.width / 2, 
                                      enemy.y + enemy.height / 3, 4)
             end
             
             if enemy.isCharging then
                 love.graphics.setColor(1, 1, 0, 0.3)
                 love.graphics.setLineWidth(2)
-                love.graphics.circle("line", enemy.x + enemy.width / 2, 
+                love.graphics.circle("line", screenX + enemy.width / 2, 
                                     enemy.y + enemy.height / 2, 
                                     enemy.width, love.timer.getTime() * 10 % math.pi * 2)
             end
@@ -482,7 +499,7 @@ function EnemySystem:draw()
             if enemy.health < enemy.maxHealth then
                 local barWidth = enemy.width
                 local barHeight = 4
-                local barX = enemy.x
+                local barX = screenX
                 local barY = enemy.y - 10
                 local healthPercent = enemy.health / enemy.maxHealth
                 
@@ -493,17 +510,23 @@ function EnemySystem:draw()
                 love.graphics.rectangle("fill", barX, barY, barWidth * healthPercent, barHeight, 2, 2)
             end
         end
+        ::continue::
     end
     
     for _, proj in ipairs(self.projectiles) do
+        local screenX = proj.x - camX
+        if screenX < -50 or screenX > self.screenWidth + 50 then
+            goto continue_proj
+        end
         love.graphics.setColor(proj.color[1], proj.color[2], proj.color[3])
-        love.graphics.circle("fill", proj.x, proj.y, proj.size)
+        love.graphics.circle("fill", screenX, proj.y, proj.size)
         
         love.graphics.setColor(1, 1, 1, 0.6)
-        love.graphics.circle("fill", proj.x, proj.y, proj.size * 0.4)
+        love.graphics.circle("fill", screenX, proj.y, proj.size * 0.4)
         
         love.graphics.setColor(proj.color[1], proj.color[2], proj.color[3], 0.3)
-        love.graphics.circle("fill", proj.x, proj.y, proj.size * 1.5)
+        love.graphics.circle("fill", screenX, proj.y, proj.size * 1.5)
+        ::continue_proj::
     end
 end
 

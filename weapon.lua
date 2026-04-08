@@ -67,7 +67,17 @@ function WeaponSystem:new()
     instance.pickups = {}
     instance.pickupSpawnTimer = 0
     instance.pickupSpawnInterval = 10
+    instance.cameraX = 0
+    instance.screenWidth = 800
     return instance
+end
+
+function WeaponSystem:setCameraX(camX)
+    self.cameraX = camX
+end
+
+function WeaponSystem:setScreenWidth(width)
+    self.screenWidth = width
 end
 
 function WeaponSystem:generateRandomWeapon()
@@ -247,25 +257,31 @@ function WeaponSystem:drawHUD()
 end
 
 function WeaponSystem:drawPickups()
+    local camX = self.cameraX or 0
     for _, pickup in ipairs(self.pickups) do
+        local screenX = pickup.x - camX
+        if screenX < -100 or screenX > self.screenWidth + 100 then
+            goto continue
+        end
         local y = pickup.y + math.sin(pickup.bobOffset) * 5
         
         love.graphics.setColor(0, 0, 0, 0.4)
-        love.graphics.rectangle("fill", pickup.x + 2, y + 2, pickup.width, pickup.height, 4, 4)
+        love.graphics.rectangle("fill", screenX + 2, y + 2, pickup.width, pickup.height, 4, 4)
         
         love.graphics.setColor(pickup.weapon.color[1], pickup.weapon.color[2], pickup.weapon.color[3], 0.3)
-        love.graphics.rectangle("fill", pickup.x, y, pickup.width, pickup.height, 4, 4)
+        love.graphics.rectangle("fill", screenX, y, pickup.width, pickup.height, 4, 4)
         
         love.graphics.setColor(pickup.weapon.color[1], pickup.weapon.color[2], pickup.weapon.color[3])
-        love.graphics.rectangle("fill", pickup.x, y, pickup.width, pickup.height, 4, 4)
+        love.graphics.rectangle("fill", screenX, y, pickup.width, pickup.height, 4, 4)
         
         love.graphics.setColor(1, 1, 1)
         love.graphics.setFont(love.graphics.newFont(8))
-        love.graphics.printf("?", pickup.x, y + 6, pickup.width, "center")
+        love.graphics.printf("?", screenX, y + 6, pickup.width, "center")
         
         love.graphics.setColor(1, 1, 1, 0.8)
         love.graphics.setFont(love.graphics.newFont(10))
-        love.graphics.printf(pickup.weapon.name, pickup.x - 10, y + pickup.height + 5, pickup.width + 20, "center")
+        love.graphics.printf(pickup.weapon.name, screenX - 10, y + pickup.height + 5, pickup.width + 20, "center")
+        ::continue::
     end
 end
 

@@ -354,52 +354,68 @@ function ProjectileSystem:setScreenSize(width, height)
     self.screenHeight = height
 end
 
+function ProjectileSystem:setLevelBounds(start, levelEnd)
+    self.levelStart = start
+    self.levelEnd = levelEnd
+end
+
+function ProjectileSystem:setCameraX(camX)
+    self.cameraX = camX
+end
+
 function ProjectileSystem:draw()
+    local camX = self.cameraX or 0
     for _, proj in ipairs(self.projectiles) do
-        self:drawProjectile(proj)
+        local screenX = proj.x - camX
+        if screenX < -100 or screenX > self.screenWidth + 100 then
+            goto continue
+        end
+        self:drawProjectile(proj, screenX)
+        ::continue::
     end
 end
 
-function ProjectileSystem:drawProjectile(proj)
+function ProjectileSystem:drawProjectile(proj, screenX)
+    screenX = screenX or proj.x
     if proj.hasTrail then
         for i, point in ipairs(proj.trail) do
             local trailSize = proj.size * (1 - (i - 1) / proj.trailLength) * 0.7
             
             love.graphics.setColor(proj.color[1], proj.color[2], proj.color[3], point.alpha * 0.4)
-            love.graphics.circle("fill", point.x, point.y, trailSize)
+            love.graphics.circle("fill", point.x - camX, point.y, trailSize)
         end
     end
     
     love.graphics.setColor(proj.color[1], proj.color[2], proj.color[3], 0.3)
-    love.graphics.circle("fill", proj.x, proj.y, proj.size * 2)
+    love.graphics.circle("fill", screenX, proj.y, proj.size * 2)
     
     love.graphics.setColor(proj.color[1], proj.color[2], proj.color[3], 0.6)
-    love.graphics.circle("fill", proj.x, proj.y, proj.size * 1.3)
+    love.graphics.circle("fill", screenX, proj.y, proj.size * 1.3)
     
     love.graphics.setColor(proj.color[1], proj.color[2], proj.color[3])
     if proj.shape == "line" then
         local length = proj.size * 3
-        local endX = proj.x - math.cos(proj.rotation) * length
+        local endX = screenX - math.cos(proj.rotation) * length
         local endY = proj.y - math.sin(proj.rotation) * length
         love.graphics.setLineWidth(proj.size * 0.6)
-        love.graphics.line(proj.x, proj.y, endX, endY)
+        love.graphics.line(screenX, proj.y, endX, endY)
     else
-        love.graphics.circle("fill", proj.x, proj.y, proj.size)
+        love.graphics.circle("fill", screenX, proj.y, proj.size)
     end
     
     love.graphics.setColor(1, 1, 1, 0.8)
     if proj.shape == "line" then
         local length = proj.size * 1.5
-        local endX = proj.x - math.cos(proj.rotation) * length
+        local endX = screenX - math.cos(proj.rotation) * length
         local endY = proj.y - math.sin(proj.rotation) * length
         love.graphics.setLineWidth(proj.size * 0.3)
-        love.graphics.line(proj.x, proj.y, endX, endY)
+        love.graphics.line(screenX, proj.y, endX, endY)
     else
-        love.graphics.circle("fill", proj.x, proj.y, proj.size * 0.4)
+        love.graphics.circle("fill", screenX, proj.y, proj.size * 0.4)
     end
     
     love.graphics.setColor(proj.glowColor[1], proj.glowColor[2], proj.glowColor[3], 0.2)
-    love.graphics.circle("fill", proj.x, proj.y, proj.size * 2.5)
+    love.graphics.circle("fill", screenX, proj.y, proj.size * 2.5)
 end
 
 function ProjectileSystem:reset()
