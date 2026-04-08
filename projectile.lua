@@ -367,16 +367,15 @@ function ProjectileSystem:draw()
     local camX = self.cameraX or 0
     for _, proj in ipairs(self.projectiles) do
         local screenX = proj.x - camX
-        if screenX < -100 or screenX > self.screenWidth + 100 then
-            goto continue
+        if screenX >= -100 and screenX <= self.screenWidth + 100 then
+            self:drawProjectile(proj, screenX)
         end
-        self:drawProjectile(proj, screenX)
-        ::continue::
     end
 end
 
 function ProjectileSystem:drawProjectile(proj, screenX)
-    screenX = screenX or proj.x
+    local camX = self.cameraX or 0
+    screenX = screenX or (proj.x - camX)
     if proj.hasTrail then
         for i, point in ipairs(proj.trail) do
             local trailSize = proj.size * (1 - (i - 1) / proj.trailLength) * 0.7
