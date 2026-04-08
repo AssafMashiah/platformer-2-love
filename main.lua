@@ -124,7 +124,7 @@ function love.update(dt)
     
     player.velocityX = dx * player.speed
     
-    if (love.keyboard.isDown("up") or love.keyboard.isDown("w") or love.keyboard.isDown(" ")) and player.grounded then
+    if (love.keyboard.isDown("up") or love.keyboard.isDown("w") or love.keyboard.isDown("space")) and player.grounded then
         player.velocityY = -player.jumpForce
         player.grounded = false
         sound.jump()
