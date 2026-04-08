@@ -129,6 +129,7 @@ function EnemySystem:generateEnemy(x, y, forceType)
         chargeTimer = 0,
         isCharging = false,
         phaseThrough = enemyData.phaseThrough or false,
+        flickerRate = enemyData.flickerRate or 5,
         flickerTimer = 0,
         isVisible = true,
         
@@ -193,7 +194,7 @@ function EnemySystem:update(dt, player, platforms)
     end
     
     for _, enemy in ipairs(self.enemies) do
-        if enemy.phaseThrough then
+        if enemy.phaseThrough and enemy.flickerRate then
             enemy.flickerTimer = enemy.flickerTimer + dt * enemy.flickerRate
             if enemy.flickerTimer >= 1 then
                 enemy.flickerTimer = 0
