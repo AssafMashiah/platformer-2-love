@@ -1,3 +1,5 @@
+local Characters = require("characters")
+
 HUD = {}
 HUD.__index = HUD
 
@@ -20,6 +22,7 @@ function HUD:new()
     instance.gameOver = false
     instance.gameOverTimer = 0
     instance.paused = false
+    instance.charSelection = 1
     return instance
 end
 
@@ -529,6 +532,156 @@ function HUD:reset()
     self.gameOver = false
     self.gameOverTimer = 0
     self.paused = false
+    self.charSelection = 1
+end
+
+function HUD:initCharSelect()
+    self.charSelection = 1
+end
+
+function HUD:drawCharSelect(selectedId)
+    love.graphics.setBackgroundColor(0.05, 0.05, 0.1)
+    
+    for x = 0, self.screenWidth, 40 do
+        love.graphics.setColor(0.1, 0.1, 0.15)
+        love.graphics.line(x, 0, x, self.screenHeight)
+    end
+    for y = 0, self.screenHeight, 40 do
+        love.graphics.setColor(0.1, 0.1, 0.15)
+        love.graphics.line(0, y, self.screenWidth, y)
+    end
+    
+    local centerX = self.screenWidth / 2
+    local centerY = self.screenHeight / 2
+    
+    love.graphics.setColor(0, 0, 0, 0.7)
+    love.graphics.rectangle("fill", centerX - 350, 40, 700, 520, 10, 10)
+    
+    love.graphics.setColor(1, 1, 1, 0.3)
+    love.graphics.rectangle("line", centerX - 350, 40, 700, 520, 10, 10)
+    
+    love.graphics.setColor(0.3, 0.7, 1)
+    love.graphics.setFont(love.graphics.newFont(32))
+    love.graphics.printf("CHOOSE YOUR CHARACTER", centerX - 350, 60, 700, "center")
+    
+    local charSpacing = 130
+    local startX = centerX - (#Characters * charSpacing) / 2 + charSpacing / 2
+    local charY = 180
+    
+    for i, char in ipairs(Characters) do
+        local x = startX + (i - 1) * charSpacing
+        
+        local isSelected = (i == self.charSelection)
+        local boxSize = 80
+        
+        if isSelected then
+            love.graphics.setColor(1, 1, 1, 0.3)
+            love.graphics.rectangle("fill", x - boxSize/2 - 8, charY - boxSize/2 - 8, boxSize + 16, boxSize + 16, 8, 8)
+            
+            love.graphics.setColor(1, 1, 1, 0.6)
+            love.graphics.rectangle("line", x - boxSize/2 - 8, charY - boxSize/2 - 8, boxSize + 16, boxSize + 16, 8, 8)
+        end
+        
+        love.graphics.setColor(0.15, 0.15, 0.2)
+        love.graphics.rectangle("fill", x - boxSize/2, charY - boxSize/2, boxSize, boxSize, 6, 6)
+        
+        love.graphics.setColor(char.color[1], char.color[2], char.color[3])
+        love.graphics.rectangle("fill", x - boxSize/2 + 4, charY - boxSize/2 + 4, boxSize - 8, boxSize - 8, 4, 4)
+        
+        local lighterColor = {
+            math.min(1, char.color[1] + 0.2),
+            math.min(1, char.color[2] + 0.2),
+            math.min(1, char.color[3] + 0.2)
+        }
+        love.graphics.setColor(lighterColor[1], lighterColor[2], lighterColor[3])
+        love.graphics.rectangle("fill", x - boxSize/2 + 8, charY - boxSize/2 + 8, boxSize - 16, (boxSize - 16) / 3, 3, 3)
+        
+        love.graphics.setColor(1, 1, 1)
+        love.graphics.circle("fill", x - 10, charY - 5, 5)
+        love.graphics.circle("fill", x + 10, charY - 5, 5)
+        love.graphics.setColor(0.1, 0.1, 0.2)
+        love.graphics.circle("fill", x - 9, charY - 5, 3)
+        love.graphics.circle("fill", x + 11, charY - 5, 3)
+        
+        love.graphics.setColor(1, 1, 1)
+        love.graphics.setFont(love.graphics.newFont(12))
+        if isSelected then
+            love.graphics.setColor(0, 1, 0.5)
+            love.graphics.setFont(love.graphics.newFont(14))
+        end
+        love.graphics.printf(char.name, x - 60, charY + boxSize/2 + 10, 120, "center")
+    end
+    
+    local selectedChar = Characters[self.charSelection]
+    
+    love.graphics.setColor(0.2, 0.2, 0.25)
+    love.graphics.rectangle("fill", centerX - 280, centerY + 100, 560, 180, 8, 8)
+    
+    love.graphics.setColor(1, 1, 1, 0.3)
+    love.graphics.rectangle("line", centerX - 280, centerY + 100, 560, 180, 8, 8)
+    
+    love.graphics.setColor(selectedChar.color[1], selectedChar.color[2], selectedChar.color[3])
+    love.graphics.setFont(love.graphics.newFont(24))
+    love.graphics.printf(selectedChar.name, centerX - 280, centerY + 110, 560, "center")
+    
+    love.graphics.setColor(0.7, 0.7, 0.7)
+    love.graphics.setFont(love.graphics.newFont(14))
+    love.graphics.printf(selectedChar.description, centerX - 280, centerY + 145, 560, "center")
+    
+    local statY = centerY + 180
+    local statFont = love.graphics.newFont(12)
+    
+    local stats = {
+        {"SPEED", selectedChar.speed, 400},
+        {"JUMP", selectedChar.jumpForce, 550},
+        {"GRIP", math.floor(selectedChar.grip * 100), 100}
+    }
+    
+    for i, stat in ipairs(stats) do
+        local statX = centerX - 240 + (i - 1) * 200
+        
+        love.graphics.setColor(0.5, 0.5, 0.5)
+        love.graphics.setFont(statFont)
+        love.graphics.printf(stat[1], statX, statY, 150, "left")
+        
+        love.graphics.setColor(0.3, 0.3, 0.3)
+        love.graphics.rectangle("fill", statX, statY + 18, 120, 10, 3, 3)
+        
+        local fillWidth = (stat[2] / stat[3]) * 120
+        local statColor = {0.3, 0.7, 1}
+        if stat[1] == "JUMP" then statColor = {0.5, 0.9, 0.5}
+        elseif stat[1] == "GRIP" then statColor = {1, 0.8, 0.3}
+        end
+        
+        love.graphics.setColor(statColor[1], statColor[2], statColor[3])
+        love.graphics.rectangle("fill", statX, statY + 18, fillWidth, 10, 3, 3)
+        
+        love.graphics.setColor(1, 1, 1)
+        love.graphics.printf(tostring(stat[2]), statX, statY + 32, 120, "left")
+    end
+    
+    love.graphics.setColor(0.4, 0.4, 0.4)
+    love.graphics.setFont(love.graphics.newFont(10))
+    love.graphics.printf("← → Navigate   ENTER Select   ESC Back", centerX - 350, centerY + 300, 700, "center")
+end
+
+function HUD:handleCharSelectKey(key, currentSelection)
+    if key == "left" or key == "a" then
+        self.charSelection = self.charSelection - 1
+        if self.charSelection < 1 then
+            self.charSelection = #Characters
+        end
+    elseif key == "right" or key == "d" then
+        self.charSelection = self.charSelection + 1
+        if self.charSelection > #Characters then
+            self.charSelection = 1
+        end
+    elseif key == "return" or key == "space" then
+        return "select", self.charSelection
+    elseif key == "escape" or key == "backspace" then
+        return "back", currentSelection
+    end
+    return nil, self.charSelection
 end
 
 return HUD

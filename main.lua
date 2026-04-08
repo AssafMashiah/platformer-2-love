@@ -2,10 +2,11 @@ local EnemySystem = require("enemy")
 local WeaponSystem = require("weapon")
 local ProjectileSystem = require("projectile")
 local HUD = require("hud")
-local sound = require("sound")
+local Characters = require("characters")
 
 GameState = {
     MENU = "menu",
+    CHAR_SELECT = "charselect",
     PLAYING = "playing",
     PAUSED = "paused",
     GAME_OVER = "gameover"
@@ -18,6 +19,7 @@ local player = {
     height = 32,
     speed = 250,
     jumpForce = 400,
+    grip = 1.0,
     velocityX = 0,
     velocityY = 0,
     grounded = false,
@@ -27,6 +29,8 @@ local player = {
     invulnerableTimer = 0,
     maxHealth = 100
 }
+
+local selectedCharacterId = 1
 
 local platforms = {}
 local enemySystem
@@ -97,7 +101,7 @@ function love.load()
 end
 
 function love.update(dt)
-    if currentState == GameState.MENU then
+    if currentState == GameState.MENU or currentState == GameState.CHAR_SELECT then
         hud:update(dt)
         return
     end
@@ -122,7 +126,14 @@ function love.update(dt)
         dx = dx + 1
     end
     
-    player.velocityX = dx * player.speed
+    if dx ~= 0 then
+        player.velocityX = dx * player.speed
+    else
+        player.velocityX = player.velocityX * (1 - player.grip * dt * 10)
+        if math.abs(player.velocityX) < 1 then
+            player.velocityX = 0
+        end
+    end
     
     if (love.keyboard.isDown("up") or love.keyboard.isDown("w") or love.keyboard.isDown("space")) and player.grounded then
         player.velocityY = -player.jumpForce
@@ -234,6 +245,9 @@ function love.draw()
     if currentState == GameState.MENU then
         drawMenu()
         return
+    elseif currentState == GameState.CHAR_SELECT then
+        hud:drawCharSelect(selectedCharacterId)
+        return
     end
     
     love.graphics.setBackgroundColor(0.05, 0.05, 0.12)
@@ -301,15 +315,22 @@ function drawPlayer()
         return
     end
     
+    local char = Characters.getById(selectedCharacterId)
+    
     love.graphics.setColor(0, 0, 0, 0.4)
     love.graphics.ellipse("fill", player.x + player.width / 2 + 2, 
                            player.y + player.height + 2, 
                            player.width / 2 + 2, 6)
     
-    love.graphics.setColor(0.2, 0.5, 0.9)
+    love.graphics.setColor(char.color[1], char.color[2], char.color[3])
     love.graphics.rectangle("fill", player.x, player.y, player.width, player.height, 4, 4)
     
-    love.graphics.setColor(0.4, 0.7, 1)
+    local lighterColor = {
+        math.min(1, char.color[1] + 0.2),
+        math.min(1, char.color[2] + 0.2),
+        math.min(1, char.color[3] + 0.2)
+    }
+    love.graphics.setColor(lighterColor[1], lighterColor[2], lighterColor[3])
     love.graphics.rectangle("fill", player.x + 2, player.y + 2, player.width - 4, player.height / 3, 3, 3)
     
     local eyeOffsetX = player.facingX * 4
@@ -330,13 +351,29 @@ end
 
 function love.keypressed(key)
     if currentState == GameState.MENU then
-        local result = hud:handleMenuKey(key)
+        local result, charId = hud:handleMenuKey(key)
         if result == "start" then
+            currentState = GameState.CHAR_SELECT
+            hud:initCharSelect()
+        elseif result == "quit" then
+            love.event.quit()
+        end
+        return
+    end
+    
+    if currentState == GameState.CHAR_SELECT then
+        local result, newCharId = hud:handleCharSelectKey(key, selectedCharacterId)
+        if result == "back" then
+            currentState = GameState.MENU
+        elseif result == "select" then
+            selectedCharacterId = newCharId
+            local char = Characters.getById(selectedCharacterId)
+            player.speed = char.speed
+            player.jumpForce = char.jumpForce
+            player.grip = char.grip
             resetGame()
             currentState = GameState.PLAYING
             hud:setWeapon(weaponSystem:getCurrentWeapon())
-        elseif result == "quit" then
-            love.event.quit()
         end
         return
     end
