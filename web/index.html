@@ -5,95 +5,153 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Platformer - Survive the Onslaught</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            background: #1a1a2e;
+            background: #0a0a1a;
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Courier New', monospace;
+            color: #eee;
+        }
+        h1 {
+            color: #e94560;
+            margin-bottom: 10px;
+            font-size: 28px;
+            text-shadow: 0 0 20px rgba(233,69,96,0.5);
         }
         #game-container {
+            position: relative;
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 20px;
+            gap: 15px;
         }
-        #game-canvas {
-            border: 4px solid #e94560;
-            border-radius: 8px;
-            box-shadow: 0 0 30px rgba(233, 69, 96, 0.5);
+        #canvas-container {
+            position: relative;
+            border: 3px solid #e94560;
+            border-radius: 6px;
+            box-shadow: 0 0 40px rgba(233,69,96,0.3);
+            overflow: hidden;
         }
-        .loading {
+        canvas {
+            display: block;
+            background: #000;
+            image-rendering: pixelated;
+        }
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
             color: #e94560;
-            font-size: 24px;
+            font-size: 20px;
             text-align: center;
+            z-index: 10;
         }
-        .controls {
-            color: #eee;
+        #loading .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #333;
+            border-top: 4px solid #e94560;
+            border-radius: 50%;
+            margin: 15px auto;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .controls-panel {
             background: rgba(255,255,255,0.05);
-            padding: 20px;
+            border: 1px solid rgba(233,69,96,0.3);
             border-radius: 8px;
+            padding: 15px 25px;
             max-width: 800px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px 30px;
         }
-        .controls h3 {
+        .controls-panel h3 {
             color: #e94560;
-            margin-bottom: 10px;
+            grid-column: 1 / -1;
+            margin-bottom: 5px;
         }
-        .controls ul {
-            list-style: none;
-            padding: 0;
-        }
-        .controls li {
-            padding: 5px 0;
-        }
-        .controls strong {
+        .controls-panel .key {
             color: #e94560;
+            font-weight: bold;
         }
+        .fullscreen-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: rgba(233,69,96,0.8);
+            color: #fff;
+            border: none;
+            padding: 5px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 12px;
+            z-index: 20;
+        }
+        .fullscreen-btn:hover { background: #e94560; }
     </style>
 </head>
 <body>
+    <h1>Platformer - Survive the Onslaught</h1>
     <div id="game-container">
-        <div class="loading" id="loading">Loading game...</div>
-        <canvas id="game-canvas"></canvas>
-        <div class="controls">
+        <div id="canvas-container">
+            <div id="loading">
+                <div class="spinner"></div>
+                Loading game...
+            </div>
+            <canvas id="canvas" width="800" height="600"></canvas>
+            <button class="fullscreen-btn" onclick="toggleFullscreen()">Fullscreen</button>
+        </div>
+        <div class="controls-panel">
             <h3>Controls</h3>
-            <ul>
-                <li><strong>WASD / Arrow Keys</strong> - Move character</li>
-                <li><strong>W / Up / Space</strong> - Jump (also shoots when in air)</li>
-                <li><strong>Space</strong> - Shoot in the direction you're facing</li>
-                <li><strong>P / Escape</strong> - Pause/Resume game</li>
-            </ul>
+            <div><span class="key">WASD / Arrows</span> - Move</div>
+            <div><span class="key">W / Up / Space</span> - Jump (double jump!)</div>
+            <div><span class="key">Space</span> - Shoot</div>
+            <div><span class="key">P / Esc</span> - Pause</div>
         </div>
     </div>
+
     <script>
+        function toggleFullscreen() {
+            var container = document.getElementById('canvas-container');
+            if (!document.fullscreenElement) {
+                container.requestFullscreen().catch(function(){});
+            } else {
+                document.exitFullscreen();
+            }
+        }
+
         var Module = {
-            canvas: (function() {
-                var canvas = document.getElementById("game-canvas");
-                canvas.width = 800;
-                canvas.height = 600;
-                return canvas;
-            })(),
+            canvas: document.getElementById('canvas'),
+            print: function(text) { console.log('[game] ' + text); },
+            printErr: function(text) { console.error('[game] ' + text); },
             setStatus: function(text) {
-                if (text) {
-                    document.getElementById("loading").textContent = text;
+                if (!text) {
+                    document.getElementById('loading').style.display = 'none';
                 } else {
-                    document.getElementById("loading").style.display = "none";
+                    document.getElementById('loading').innerHTML = '<div class="spinner"></div>' + text;
                 }
             },
             totalDependencies: 0,
             monitorRunDependencies: function(left) {
                 this.totalDependencies = left;
+                if (left === 0) {
+                    document.getElementById('loading').style.display = 'none';
+                }
             }
         };
-        window.onerror = function(event) {
-            console.error(event);
-        };
+
+        window.addEventListener('keydown', function(e) {
+            if (['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].indexOf(e.code) !== -1) {
+                e.preventDefault();
+            }
+        });
     </script>
     <script src="game.js"></script>
 </body>

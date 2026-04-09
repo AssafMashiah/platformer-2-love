@@ -6,12 +6,28 @@ on:
       - main
   workflow_dispatch:
 
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Build .love file
+        run: |
+          zip game.love *.lua conf.lua
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -21,46 +37,29 @@ jobs:
       - name: Install love.js
         run: npm install -g love.js
 
-      - name: Build .love file
-        run: |
-          zip -r game.zip *.lua conf.lua
-          mv game.zip game.love
-
       - name: Build web version
-        run: love.js game.love web-build -t "Platformer" -c
+        run: |
+          love.js game.love www --title "Platformer - Survive the Onslaught" -c
+          cp web/index.html www/index.html
         env:
           NODE_PATH: /usr/local/lib/node_modules
 
-      - name: Upload web build artifact
-        uses: actions/upload-artifact@v4
+      - name: Fix permissions
+        run: |
+          chmod -R +rX www
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          name: web-build
-          path: web-build/
+          path: www
 
   deploy:
     needs: build
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Download web build artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: web-build
-
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
-
-      - name: Upload to GitHub Pages
-        uses: upload-pages-artifact@v3
-        with:
-          path: .
-
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
