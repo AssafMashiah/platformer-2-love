@@ -180,8 +180,8 @@ function ProjectileSystem:update(dt)
         end
         
         if proj.lifetime <= 0 or 
-           proj.x < -50 or proj.x > self.screenWidth + 50 or 
-           proj.y < -50 or proj.y > self.screenHeight + 50 or
+           proj.x < -500 or proj.x > (self.levelEnd or self.screenWidth) + 500 or 
+           proj.y < -500 or proj.y > self.screenHeight + 500 or
            proj.hitsRemaining <= 0 then
             table.insert(deadProjectiles, i)
         end

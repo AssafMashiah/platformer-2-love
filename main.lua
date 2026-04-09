@@ -160,15 +160,6 @@ function love.update(dt)
     
     player.velocityX = dx * player.speed
     
-    if (love.keyboard.isDown("up") or love.keyboard.isDown("w") or love.keyboard.isDown("space")) and player.jumpsRemaining > 0 then
-        player.velocityY = -player.jumpForce
-        player.jumpsRemaining = player.jumpsRemaining - 1
-        if player.grounded then
-            player.grounded = false
-        end
-        sound.jump()
-    end
-    
     player.velocityY = player.velocityY + 1000 * dt
     if player.velocityY > 600 then
         player.velocityY = 600
@@ -472,6 +463,13 @@ function love.keypressed(key)
     
     if currentState == GameState.PLAYING then
         if key == "space" then
+            if player.jumpsRemaining > 0 then
+                player.velocityY = -player.jumpForce
+                player.jumpsRemaining = player.jumpsRemaining - 1
+                player.grounded = false
+                sound.jump()
+            end
+            
             local centerX = player.x + player.width / 2
             local centerY = player.y + player.height / 2
             
@@ -493,6 +491,13 @@ function love.keypressed(key)
                 })
                 sound.shoot()
                 hud:updateFireTime(love.timer.getTime())
+            end
+        elseif key == "w" or key == "up" then
+            if player.jumpsRemaining > 0 then
+                player.velocityY = -player.jumpForce
+                player.jumpsRemaining = player.jumpsRemaining - 1
+                player.grounded = false
+                sound.jump()
             end
         end
     end
