@@ -326,14 +326,21 @@ function EnemySystem:applyGravity(enemy, dt, platforms)
         enemy.velocityY = 400
     end
     
+    enemy.grounded = false
+    
     for _, platform in ipairs(platforms) do
-        local bounds = platform:getBounds()
+        local bounds = platform.getBounds and platform:getBounds() or {
+            left = platform.x,
+            right = (platform.x or 0) + (platform.width or 0),
+            top = platform.y,
+            bottom = (platform.y or 0) + (platform.height or 0)
+        }
         
         local prevBottom = enemy.y + enemy.height - enemy.velocityY * dt
         local currBottom = enemy.y + enemy.height
         
         if enemy.x + enemy.width > bounds.left and enemy.x < bounds.right then
-            if prevBottom <= bounds.top and currBottom >= bounds.top then
+            if prevBottom <= bounds.top and currBottom >= bounds.top and enemy.velocityY >= 0 then
                 enemy.y = bounds.top - enemy.height
                 enemy.velocityY = 0
                 enemy.grounded = true
