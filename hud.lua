@@ -236,7 +236,8 @@ function HUD:drawWeaponInfo()
     love.graphics.setColor(1, 1, 1, 0.3)
     love.graphics.rectangle("line", hudX, hudY, boxWidth, boxHeight, 5, 5)
     
-    love.graphics.setColor(weapon.color[1], weapon.color[2], weapon.color[3])
+    local wc = weapon.color or {1, 1, 1}
+    love.graphics.setColor(wc[1], wc[2], wc[3])
     love.graphics.circle("fill", hudX + 25, hudY + 35, 15)
     
     love.graphics.setColor(1, 1, 1, 0.5)
@@ -251,9 +252,6 @@ function HUD:drawWeaponInfo()
     local stats = string.format("DMG: %d  |  SPD: %d", weapon.damage, math.floor(weapon.projectileSpeed / 10))
     love.graphics.print(stats, hudX + 48, hudY + 28)
     
-    local currentTime = love.timer.getTime()
-    local cooldownProgress = math.min(1, (currentTime - self.lastFireTime) / self.fireRate)
-    
     local cooldownWidth = 140
     local cooldownHeight = 8
     local cooldownX = hudX + 50
@@ -261,6 +259,9 @@ function HUD:drawWeaponInfo()
     
     love.graphics.setColor(0.3, 0.3, 0.3, 0.8)
     love.graphics.rectangle("fill", cooldownX, cooldownY, cooldownWidth, cooldownHeight, 3, 3)
+    
+    local validCooldown = self.fireRate and self.fireRate > 0
+    local cooldownProgress = validCooldown and math.min(1, (love.timer.getTime() - self.lastFireTime) / self.fireRate) or 1
     
     local readyColor = {0.3, 1, 0.3}
     if cooldownProgress < 1 then
@@ -272,9 +273,9 @@ function HUD:drawWeaponInfo()
     
     love.graphics.setColor(1, 1, 1, 0.8)
     love.graphics.setFont(love.graphics.newFont(8))
-    if cooldownProgress >= 1 then
+    if validCooldown and cooldownProgress >= 1 then
         love.graphics.print("READY", cooldownX + cooldownWidth / 2 - 15, cooldownY - 2)
-    else
+    elseif validCooldown then
         love.graphics.print("RELOADING", cooldownX + cooldownWidth / 2 - 25, cooldownY - 2)
     end
     
@@ -331,7 +332,8 @@ function HUD:drawInventorySlots()
         
         if inventory[i] then
             local w = inventory[i]
-            love.graphics.setColor(w.color[1], w.color[2], w.color[3], 0.8)
+            local wc = w.color or {1, 1, 1}
+            love.graphics.setColor(wc[1], wc[2], wc[3], 0.8)
             love.graphics.circle("fill", x + slotSize / 2, y + slotSize / 2, 8)
             
             love.graphics.setColor(1, 1, 1, 0.4)
@@ -511,7 +513,7 @@ function HUD:handleMenuKey(key)
         if self.menuSelection > #self.menuOptions then
             self.menuSelection = 1
         end
-    elseif key == "return" or key == "space" then
+    elseif key == "return" then
         if self.menuSelection == 1 then
             return "start"
         elseif self.menuSelection == 2 then
