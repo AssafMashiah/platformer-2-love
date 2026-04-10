@@ -123,15 +123,6 @@ function WeaponSystem:spawnPickup(x, y)
 end
 
 function WeaponSystem:update(dt, screenWidth, screenHeight)
-    self.pickupSpawnTimer = self.pickupSpawnTimer + dt
-    
-    if self.pickupSpawnTimer >= self.pickupSpawnInterval then
-        self.pickupSpawnTimer = 0
-        local x = math.random(50, screenWidth - 50)
-        local y = math.random(50, screenHeight - 200)
-        self:spawnPickup(x, y)
-    end
-    
     for i = #self.pickups, 1, -1 do
         local pickup = self.pickups[i]
         pickup.bobOffset = pickup.bobOffset + pickup.bobSpeed * dt
