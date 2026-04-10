@@ -163,7 +163,7 @@ function EnemySystem:spawnRandomEnemy()
     
     if edge == 1 then
         x = math.random(viewLeft + padding, viewRight - padding)
-        y = viewLeft + padding
+        y = padding
     elseif edge == 2 then
         x = viewRight - padding
         y = math.random(padding, self.screenHeight - padding)
