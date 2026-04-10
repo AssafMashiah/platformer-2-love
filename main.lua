@@ -79,6 +79,7 @@ local function resetGame()
     
     createPlatforms()
     enemySystem:reset()
+    enemySystem:spawnLevelEnemies(platforms)
     weaponSystem:fullReset()
     projectileSystem:reset()
     hud:reset()
@@ -100,6 +101,7 @@ local function generateNewLevel()
     
     createPlatforms()
     enemySystem:reset()
+    enemySystem:spawnLevelEnemies(platforms)
     projectileSystem:reset()
     
     for i = 1, 3 do
