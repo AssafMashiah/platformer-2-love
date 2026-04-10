@@ -80,6 +80,7 @@ local function resetGame()
     createPlatforms()
     enemySystem:reset()
     weaponSystem:fullReset()
+    weaponSystem:spawnLevelPickups(platforms, levelWidth, screenHeight)
     projectileSystem:reset()
     hud:reset()
     
@@ -100,13 +101,9 @@ local function generateNewLevel()
     
     createPlatforms()
     enemySystem:reset()
+    weaponSystem:reset()
+    weaponSystem:spawnLevelPickups(platforms, levelWidth, screenHeight)
     projectileSystem:reset()
-    
-    for i = 1, 3 do
-        local x = math.random(100, levelWidth - 200)
-        local y = math.random(100, screenHeight - 200)
-        weaponSystem:spawnPickup(x, y)
-    end
 end
 
 function love.load()
@@ -263,15 +260,6 @@ function love.update(dt)
     local level = math.floor(hud:getScore() / levelScoreThreshold) + 1
     hud:setLevel(level)
     enemySystem:setDifficulty(math.min(level, 5))
-    
-    if level > hud:getLevel() then
-        sound.levelComplete()
-        for i = 1, 3 do
-            local x = math.random(50, screenWidth - 50)
-            local y = math.random(50, screenHeight - 200)
-            weaponSystem:spawnPickup(x, y)
-        end
-    end
     
     hud:update(dt)
 end

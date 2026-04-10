@@ -70,7 +70,6 @@ function WeaponSystem:new()
     instance.projectiles = {}
     instance.pickups = {}
     instance.pickupSpawnTimer = 0
-    instance.pickupSpawnInterval = 10
     instance.cameraX = 0
     instance.screenWidth = 800
     return instance
@@ -122,16 +121,39 @@ function WeaponSystem:spawnPickup(x, y)
     table.insert(self.pickups, self:generatePickup(x, y))
 end
 
-function WeaponSystem:update(dt, screenWidth, screenHeight)
-    self.pickupSpawnTimer = self.pickupSpawnTimer + dt
+function WeaponSystem:spawnLevelPickups(platforms, levelWidth, screenHeight)
+    self.pickups = {}
     
-    if self.pickupSpawnTimer >= self.pickupSpawnInterval then
-        self.pickupSpawnTimer = 0
-        local x = math.random(50, screenWidth - 50)
-        local y = math.random(50, screenHeight - 200)
-        self:spawnPickup(x, y)
+    local groundY = screenHeight - 40
+    local spawnCount = math.random(3, 5)
+    local validPositions = {}
+    
+    for _, platform in ipairs(platforms) do
+        if platform.width < levelWidth then
+            table.insert(validPositions, {
+                x = platform.x + platform.width / 2,
+                y = platform.y - 24
+            })
+        end
     end
     
+    for i = 1, spawnCount do
+        local x, y
+        if #validPositions > 0 and (i <= 2 or math.random() > 0.3) then
+            local idx = math.random(1, #validPositions)
+            local pos = validPositions[idx]
+            x = pos.x + math.random(-20, 20)
+            y = pos.y
+            table.remove(validPositions, idx)
+        else
+            x = math.random(200, levelWidth - 200)
+            y = groundY - 24
+        end
+        self:spawnPickup(x, y)
+    end
+end
+
+function WeaponSystem:update(dt, screenWidth, screenHeight)
     for i = #self.pickups, 1, -1 do
         local pickup = self.pickups[i]
         pickup.bobOffset = pickup.bobOffset + pickup.bobSpeed * dt
