@@ -20,6 +20,7 @@ function HUD:new()
     instance.gameOver = false
     instance.gameOverTimer = 0
     instance.paused = false
+    instance.weaponSystem = nil
     return instance
 end
 
@@ -71,6 +72,10 @@ end
 
 function HUD:getWeapon()
     return self.currentWeapon
+end
+
+function HUD:setWeaponSystem(ws)
+    self.weaponSystem = ws
 end
 
 function HUD:updateFireTime(time)
@@ -272,6 +277,71 @@ function HUD:drawWeaponInfo()
     else
         love.graphics.print("RELOADING", cooldownX + cooldownWidth / 2 - 25, cooldownY - 2)
     end
+    
+    self:drawInventorySlots()
+end
+
+function HUD:drawInventorySlots()
+    if not self.weaponSystem then return end
+    
+    local inventory = self.weaponSystem:getInventory()
+    local currentSlot = self.weaponSystem:getCurrentSlot()
+    local maxSlots = self.weaponSystem:getMaxInventory()
+    
+    local slotSize = 36
+    local slotPadding = 4
+    local startX = 220
+    local startY = self.screenHeight - 90
+    
+    local totalWidth = maxSlots * slotSize + (maxSlots - 1) * slotPadding
+    local bgX = startX - 4
+    local bgY = startY - 4
+    local bgW = totalWidth + 8
+    local bgH = slotSize + 24
+    
+    love.graphics.setColor(0, 0, 0, 0.6)
+    love.graphics.rectangle("fill", bgX, bgY, bgW, bgH, 5, 5)
+    
+    love.graphics.setColor(1, 1, 1, 0.2)
+    love.graphics.rectangle("line", bgX, bgY, bgW, bgH, 5, 5)
+    
+    love.graphics.setColor(0.5, 0.5, 0.5)
+    love.graphics.setFont(love.graphics.newFont(8))
+    love.graphics.print("[Q] Swap  [1-4] Select", startX, bgY + 2)
+    
+    for i = 1, maxSlots do
+        local x = startX + (i - 1) * (slotSize + slotPadding)
+        local y = startY + 12
+        
+        if i == currentSlot then
+            love.graphics.setColor(1, 1, 1, 0.4)
+            love.graphics.rectangle("fill", x - 1, y - 1, slotSize + 2, slotSize + 2, 4, 4)
+            love.graphics.setColor(1, 1, 1, 0.8)
+            love.graphics.rectangle("line", x - 1, y - 1, slotSize + 2, slotSize + 2, 4, 4)
+        else
+            love.graphics.setColor(0.2, 0.2, 0.2, 0.6)
+            love.graphics.rectangle("fill", x, y, slotSize, slotSize, 3, 3)
+            love.graphics.setColor(1, 1, 1, 0.15)
+            love.graphics.rectangle("line", x, y, slotSize, slotSize, 3, 3)
+        end
+        
+        love.graphics.setColor(0.4, 0.4, 0.4)
+        love.graphics.setFont(love.graphics.newFont(8))
+        love.graphics.print(tostring(i), x + 2, y + 1)
+        
+        if inventory[i] then
+            local w = inventory[i]
+            love.graphics.setColor(w.color[1], w.color[2], w.color[3], 0.8)
+            love.graphics.circle("fill", x + slotSize / 2, y + slotSize / 2, 8)
+            
+            love.graphics.setColor(1, 1, 1, 0.4)
+            love.graphics.circle("fill", x + slotSize / 2 - 2, y + slotSize / 2 - 2, 3)
+            
+            love.graphics.setColor(1, 1, 1, 0.7)
+            love.graphics.setFont(love.graphics.newFont(7))
+            love.graphics.printf(w.name, x, y + slotSize - 8, slotSize, "center")
+        end
+    end
 end
 
 function HUD:drawScorePopups()
@@ -346,6 +416,8 @@ function HUD:drawControlsScreen(centerX, centerY)
     local controls = {
         {"MOVE", "WASD or Arrow Keys"},
         {"SHOOT", "SPACE"},
+        {"SWAP WEAPON", "Q"},
+        {"SELECT SLOT", "1-4"},
         {"PAUSE", "P or ESC"},
         {"MENU", "ESC"}
     }

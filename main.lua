@@ -79,7 +79,7 @@ local function resetGame()
     
     createPlatforms()
     enemySystem:reset()
-    weaponSystem:reset()
+    weaponSystem:fullReset()
     projectileSystem:reset()
     hud:reset()
     
@@ -126,6 +126,7 @@ function love.load()
     
     hud = HUD:new()
     hud:setScreenSize(screenWidth, screenHeight)
+    hud:setWeaponSystem(weaponSystem)
     
     sound.init()
     
@@ -462,7 +463,22 @@ function love.keypressed(key)
     end
     
     if currentState == GameState.PLAYING then
-        if key == "space" then
+        if key == "q" then
+            weaponSystem:swapToNext()
+            hud:setWeapon(weaponSystem:getCurrentWeapon())
+        elseif key == "1" then
+            weaponSystem:swapToSlot(1)
+            hud:setWeapon(weaponSystem:getCurrentWeapon())
+        elseif key == "2" then
+            weaponSystem:swapToSlot(2)
+            hud:setWeapon(weaponSystem:getCurrentWeapon())
+        elseif key == "3" then
+            weaponSystem:swapToSlot(3)
+            hud:setWeapon(weaponSystem:getCurrentWeapon())
+        elseif key == "4" then
+            weaponSystem:swapToSlot(4)
+            hud:setWeapon(weaponSystem:getCurrentWeapon())
+        elseif key == "space" then
             if player.jumpsRemaining > 0 then
                 player.velocityY = -player.jumpForce
                 player.jumpsRemaining = player.jumpsRemaining - 1

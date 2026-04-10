@@ -60,7 +60,11 @@ local WEAPON_TYPES = {
 
 function WeaponSystem:new()
     local instance = setmetatable({}, self)
-    instance.currentWeapon = instance:generateRandomWeapon()
+    instance.MAX_INVENTORY = 4
+    instance.inventory = {}
+    instance.currentSlot = 1
+    local startingWeapon = instance:generateRandomWeapon()
+    table.insert(instance.inventory, startingWeapon)
     instance.lastFireTime = 0
     instance.canFire = true
     instance.projectiles = {}
@@ -148,14 +152,17 @@ end
 function WeaponSystem:fire(x, y, directionX, directionY, currentTime)
     if not self.canFire then return {} end
     
-    if currentTime - self.lastFireTime < self.currentWeapon.fireRate then
+    local weapon = self:getCurrentWeapon()
+    if not weapon then return {} end
+    
+    if currentTime - self.lastFireTime < weapon.fireRate then
         return {}
     end
     
     self.lastFireTime = currentTime
     local newProjectiles = {}
     
-    local count = self.currentWeapon.projectileCount
+    local count = weapon.projectileCount
     local spread = 0.15
     
     for i = 1, count do
@@ -166,17 +173,17 @@ function WeaponSystem:fire(x, y, directionX, directionY, currentTime)
             angle = angle + offset
         end
         
-        local vx = math.cos(angle) * self.currentWeapon.projectileSpeed
-        local vy = math.sin(angle) * self.currentWeapon.projectileSpeed
+        local vx = math.cos(angle) * weapon.projectileSpeed
+        local vy = math.sin(angle) * weapon.projectileSpeed
         
         table.insert(newProjectiles, {
             x = x,
             y = y,
             vx = vx,
             vy = vy,
-            size = self.currentWeapon.size,
-            damage = self.currentWeapon.damage,
-            color = self.currentWeapon.color
+            size = weapon.size,
+            damage = weapon.damage,
+            color = weapon.color
         })
         
         table.insert(self.projectiles, newProjectiles[#newProjectiles])
@@ -203,7 +210,22 @@ function WeaponSystem:checkPickupCollision(playerX, playerY, playerWidth, player
     end
     
     if collected then
-        self.currentWeapon = collected
+        local isDuplicate = false
+        for _, w in ipairs(self.inventory) do
+            if w.name == collected.name then
+                isDuplicate = true
+                break
+            end
+        end
+        
+        if not isDuplicate then
+            if #self.inventory < self.MAX_INVENTORY then
+                table.insert(self.inventory, collected)
+                self.currentSlot = #self.inventory
+            else
+                self.inventory[self.currentSlot] = collected
+            end
+        end
     end
     
     return collected
@@ -218,11 +240,38 @@ function WeaponSystem:getPickups()
 end
 
 function WeaponSystem:getCurrentWeapon()
-    return self.currentWeapon
+    return self.inventory[self.currentSlot]
+end
+
+function WeaponSystem:getInventory()
+    return self.inventory
+end
+
+function WeaponSystem:getCurrentSlot()
+    return self.currentSlot
+end
+
+function WeaponSystem:getMaxInventory()
+    return self.MAX_INVENTORY
+end
+
+function WeaponSystem:swapToNext()
+    if #self.inventory <= 1 then return end
+    self.currentSlot = self.currentSlot + 1
+    if self.currentSlot > #self.inventory then
+        self.currentSlot = 1
+    end
+end
+
+function WeaponSystem:swapToSlot(slot)
+    if slot >= 1 and slot <= #self.inventory then
+        self.currentSlot = slot
+    end
 end
 
 function WeaponSystem:drawHUD()
-    local weapon = self.currentWeapon
+    local weapon = self:getCurrentWeapon()
+    if not weapon then return end
     local padding = 10
     local hudX = padding
     local hudY = padding
@@ -305,7 +354,21 @@ function WeaponSystem:reset()
     self.projectiles = {}
     self.pickups = {}
     self.pickupSpawnTimer = 0
-    self.currentWeapon = self:generateRandomWeapon()
+    if #self.inventory == 0 then
+        table.insert(self.inventory, self:generateRandomWeapon())
+        self.currentSlot = 1
+    end
+    self.lastFireTime = 0
+end
+
+function WeaponSystem:fullReset()
+    self.projectiles = {}
+    self.pickups = {}
+    self.pickupSpawnTimer = 0
+    self.inventory = {}
+    local startingWeapon = self:generateRandomWeapon()
+    table.insert(self.inventory, startingWeapon)
+    self.currentSlot = 1
     self.lastFireTime = 0
 end
 
