@@ -3,9 +3,11 @@ local WeaponSystem = require("weapon")
 local ProjectileSystem = require("projectile")
 local HUD = require("hud")
 local sound = require("sound")
+local Characters = require("characters")
 
 GameState = {
     MENU = "menu",
+    CHARACTER_SELECT = "charselect",
     PLAYING = "playing",
     PAUSED = "paused",
     GAME_OVER = "gameover"
@@ -27,7 +29,10 @@ local player = {
     invulnerableTimer = 0,
     maxHealth = 100,
     jumpsRemaining = 2,
-    maxJumps = 2
+    maxJumps = 2,
+    grip = 1.0,
+    characterIndex = nil,
+    characterColor = {0.2, 0.5, 0.9}
 }
 
 local platforms = {}
@@ -82,6 +87,10 @@ local function resetGame()
     weaponSystem:fullReset()
     projectileSystem:reset()
     hud:reset()
+    
+    if player.characterIndex then
+        Characters:applyToPlayer(player.characterIndex, player)
+    end
     
     gameTime = 0
     levelScoreThreshold = 500
@@ -139,6 +148,10 @@ function love.update(dt)
         return
     end
     
+    if currentState == GameState.CHARACTER_SELECT then
+        return
+    end
+    
     if currentState == GameState.PAUSED then
         return
     end
@@ -159,7 +172,10 @@ function love.update(dt)
         dx = dx + 1
     end
     
-    player.velocityX = dx * player.speed
+    local targetVelX = dx * player.speed
+    local gripFactor = player.grip or 1.0
+    local blend = math.min(1, gripFactor * 12 * dt)
+    player.velocityX = player.velocityX + (targetVelX - player.velocityX) * blend
     
     player.velocityY = player.velocityY + 1000 * dt
     if player.velocityY > 600 then
@@ -282,6 +298,11 @@ function love.draw()
         return
     end
     
+    if currentState == GameState.CHARACTER_SELECT then
+        hud:drawCharacterSelect()
+        return
+    end
+    
     love.graphics.setBackgroundColor(0.05, 0.05, 0.12)
     drawBackground()
     drawPlatforms()
@@ -358,16 +379,17 @@ function drawPlayer()
     end
     
     local offsetX = player.x - camera.x
+    local cc = player.characterColor or {0.2, 0.5, 0.9}
     
     love.graphics.setColor(0, 0, 0, 0.4)
     love.graphics.ellipse("fill", offsetX + player.width / 2 + 2, 
                            player.y + player.height + 2, 
                            player.width / 2 + 2, 6)
     
-    love.graphics.setColor(0.2, 0.5, 0.9)
+    love.graphics.setColor(cc[1], cc[2], cc[3])
     love.graphics.rectangle("fill", offsetX, player.y, player.width, player.height, 4, 4)
     
-    love.graphics.setColor(0.4, 0.7, 1)
+    love.graphics.setColor(math.min(1, cc[1] * 1.5), math.min(1, cc[2] * 1.5), math.min(1, cc[3] * 1.5))
     love.graphics.rectangle("fill", offsetX + 2, player.y + 2, player.width - 4, player.height / 3, 3, 3)
     
     local eyeOffsetX = player.facingX * 4
@@ -429,12 +451,24 @@ end
 function love.keypressed(key)
     if currentState == GameState.MENU then
         local result = hud:handleMenuKey(key)
-        if result == "start" then
+        if result == "charselect" then
+            currentState = GameState.CHARACTER_SELECT
+        elseif result == "quit" then
+            love.event.quit()
+        end
+        return
+    end
+    
+    if currentState == GameState.CHARACTER_SELECT then
+        local result = hud:handleCharacterSelectKey(key)
+        if result == "confirm" then
+            local charIndex = hud:getSelectedCharacter()
+            Characters:applyToPlayer(charIndex, player)
             resetGame()
             currentState = GameState.PLAYING
             hud:setWeapon(weaponSystem:getCurrentWeapon())
-        elseif result == "quit" then
-            love.event.quit()
+        elseif result == "back" then
+            currentState = GameState.MENU
         end
         return
     end
@@ -442,7 +476,11 @@ function love.keypressed(key)
     if currentState == GameState.GAME_OVER then
         local result = hud:handleGameOverKey(key)
         if result == "restart" then
+            local savedChar = player.characterIndex
             resetGame()
+            if savedChar then
+                Characters:applyToPlayer(savedChar, player)
+            end
             currentState = GameState.PLAYING
             hud:setWeapon(weaponSystem:getCurrentWeapon())
         elseif result == "menu" then
