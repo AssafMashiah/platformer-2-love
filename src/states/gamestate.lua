@@ -6,33 +6,33 @@ end
 
 function GameState.change(stateName, ...)
     if stateName == "menu" then
-        self.current = MenuState
+        GameState.current = MenuState
     elseif stateName == "playing" then
-        self.current = PlayingState
+        GameState.current = PlayingState
     elseif stateName == "gameover" then
-        self.current = GameOverState
+        GameState.current = GameOverState
     end
 
-    if self.current and self.current.enter then
-        self.current.enter(...)
+    if GameState.current and GameState.current.enter then
+        GameState.current.enter(...)
     end
 end
 
 function GameState.update(dt)
-    if self.current and self.current.update then
-        self.current.update(dt)
+    if GameState.current and GameState.current.update then
+        GameState.current.update(dt)
     end
 end
 
 function GameState.draw()
-    if self.current and self.current.draw then
-        self.current.draw()
+    if GameState.current and GameState.current.draw then
+        GameState.current.draw()
     end
 end
 
 function GameState.keypressed(key)
-    if self.current and self.current.keypressed then
-        self.current.keypressed(key)
+    if GameState.current and GameState.current.keypressed then
+        GameState.current.keypressed(key)
     end
 end
 

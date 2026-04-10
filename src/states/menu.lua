@@ -9,11 +9,11 @@ end
 function MenuState.draw()
     love.graphics.setColor(1, 1, 1)
     love.graphics.setNewFont(32)
-    love.graphics.printf("PLATFORMER", 400, 200, 800, "center")
+    love.graphics.printf("PLATFORMER", 0, 200, 800, "center")
 
     love.graphics.setNewFont(16)
-    love.graphics.printf("Press ENTER to Start", 400, 300, 800, "center")
-    love.graphics.printf("Press ESC to Quit", 400, 340, 800, "center")
+    love.graphics.printf("Press ENTER to Start", 0, 300, 800, "center")
+    love.graphics.printf("Press ESC to Quit", 0, 340, 800, "center")
 end
 
 function MenuState.keypressed(key)
