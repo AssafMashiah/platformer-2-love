@@ -25,10 +25,6 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
-      - name: Build .love file
-        run: |
-          zip game.love *.lua conf.lua
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -39,14 +35,15 @@ jobs:
 
       - name: Build web version
         run: |
-          love.js game.love www --title "Platformer - Survive the Onslaught" -c
-          cp web/index.html www/index.html
+          love.js . www --title "Platformer - Survive the Onslaught" -c -m 33554432
         env:
           NODE_PATH: /usr/local/lib/node_modules
 
+      - name: Copy custom index.html
+        run: cp web/index.html www/index.html
+
       - name: Fix permissions
-        run: |
-          chmod -R +rX www
+        run: chmod -R +rX www
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
