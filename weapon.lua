@@ -1,6 +1,15 @@
 WeaponSystem = {}
 WeaponSystem.__index = WeaponSystem
 
+local weaponFonts = {}
+
+local function getWeaponFont(size)
+    if not weaponFonts[size] then
+        weaponFonts[size] = love.graphics.newFont(size)
+    end
+    return weaponFonts[size]
+end
+
 local WEAPON_TYPES = {
     {
         name = "Pew Pew",
@@ -246,11 +255,11 @@ function WeaponSystem:drawHUD()
     love.graphics.circle("fill", hudX + 25, hudY + 25, 12)
     
     love.graphics.setColor(1, 1, 1)
-    love.graphics.setFont(love.graphics.newFont(14))
+    love.graphics.setFont(getWeaponFont(14))
     love.graphics.print(weapon.name, hudX + 45, hudY + 10)
     
     love.graphics.setColor(0.7, 0.7, 0.7)
-    love.graphics.setFont(love.graphics.newFont(10))
+    love.graphics.setFont(getWeaponFont(10))
     local stats = string.format("DMG: %d  SPD: %d", weapon.damage, math.floor(weapon.projectileSpeed / 10))
     love.graphics.print(stats, hudX + 45, hudY + 28)
     
@@ -282,11 +291,11 @@ function WeaponSystem:drawPickups()
         love.graphics.rectangle("fill", screenX, y, pickup.width, pickup.height, 4, 4)
         
         love.graphics.setColor(1, 1, 1)
-        love.graphics.setFont(love.graphics.newFont(8))
+        love.graphics.setFont(getWeaponFont(8))
         love.graphics.printf("?", screenX, y + 6, pickup.width, "center")
         
         love.graphics.setColor(1, 1, 1, 0.8)
-        love.graphics.setFont(love.graphics.newFont(10))
+        love.graphics.setFont(getWeaponFont(10))
         love.graphics.printf(pickup.weapon.name, screenX - 10, y + pickup.height + 5, pickup.width + 20, "center")
         
         ::continue::

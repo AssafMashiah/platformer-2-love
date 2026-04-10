@@ -188,37 +188,36 @@ function EnemySystem:update(dt, player, platforms)
         
         if not enemy.alive then
             table.remove(self.enemies, i)
-            continue
-        end
-        
-        if enemy.phaseThrough then
-            enemy.flickerTimer = enemy.flickerTimer + dt * enemy.flickerRate
-            if enemy.flickerTimer >= 1 then
-                enemy.flickerTimer = 0
-                enemy.isVisible = not enemy.isVisible
+        else
+            if enemy.phaseThrough then
+                enemy.flickerTimer = enemy.flickerTimer + dt * enemy.flickerRate
+                if enemy.flickerTimer >= 1 then
+                    enemy.flickerTimer = 0
+                    enemy.isVisible = not enemy.isVisible
+                end
             end
+            
+            local playerDistX = player.x - enemy.x
+            local playerDistY = player.y - enemy.y
+            local playerDist = math.sqrt(playerDistX * playerDistX + playerDistY * playerDistY)
+            
+            if enemy.behavior == "patrol" then
+                self:updatePatrol(enemy, dt)
+            elseif enemy.behavior == "chase" then
+                self:updateChase(enemy, dt, player, playerDist)
+            elseif enemy.behavior == "shoot" then
+                self:updateShooter(enemy, dt, player, playerDist)
+            end
+            
+            if not enemy.phaseThrough then
+                self:applyGravity(enemy, dt, platforms)
+            end
+            
+            enemy.x = enemy.x + enemy.velocityX * dt
+            enemy.y = enemy.y + enemy.velocityY * dt
+            
+            enemy.x = math.max(0, math.min(self.screenWidth - enemy.width, enemy.x))
         end
-        
-        local playerDistX = player.x - enemy.x
-        local playerDistY = player.y - enemy.y
-        local playerDist = math.sqrt(playerDistX * playerDistX + playerDistY * playerDistY)
-        
-        if enemy.behavior == "patrol" then
-            self:updatePatrol(enemy, dt)
-        elseif enemy.behavior == "chase" then
-            self:updateChase(enemy, dt, player, playerDist)
-        elseif enemy.behavior == "shoot" then
-            self:updateShooter(enemy, dt, player, playerDist)
-        end
-        
-        if not enemy.phaseThrough then
-            self:applyGravity(enemy, dt, platforms)
-        end
-        
-        enemy.x = enemy.x + enemy.velocityX * dt
-        enemy.y = enemy.y + enemy.velocityY * dt
-        
-        enemy.x = math.max(0, math.min(self.screenWidth - enemy.width, enemy.x))
     end
     
     for i = #self.projectiles, 1, -1 do
@@ -358,12 +357,13 @@ function EnemySystem:checkPlayerCollision(player)
     local damageTaken = 0
     
     for _, enemy in ipairs(self.enemies) do
-        if not enemy.alive then continue end
-        if enemy.phaseThrough and not enemy.isVisible then continue end
-        
-        if self:rectsCollide(player.x, player.y, player.width, player.height,
-                             enemy.x, enemy.y, enemy.width, enemy.height) then
-            damageTaken = damageTaken + enemy.damage
+        if enemy.alive then
+            if not (enemy.phaseThrough and not enemy.isVisible) then
+                if self:rectsCollide(player.x, player.y, player.width, player.height,
+                                     enemy.x, enemy.y, enemy.width, enemy.height) then
+                    damageTaken = damageTaken + enemy.damage
+                end
+            end
         end
     end
     
@@ -392,15 +392,15 @@ function EnemySystem:checkProjectileHit(projectiles)
     
     for _, proj in ipairs(projectiles) do
         for _, enemy in ipairs(self.enemies) do
-            if not enemy.alive then continue end
-            
-            if self:rectsCollide(proj.x - proj.size, proj.y - proj.size, 
-                                proj.size * 2, proj.size * 2,
-                                enemy.x, enemy.y, enemy.width, enemy.height) then
-                if not enemiesHit[enemy] then
-                    enemiesHit[enemy] = 0
+            if enemy.alive then
+                if self:rectsCollide(proj.x - proj.size, proj.y - proj.size, 
+                                    proj.size * 2, proj.size * 2,
+                                    enemy.x, enemy.y, enemy.width, enemy.height) then
+                    if not enemiesHit[enemy] then
+                        enemiesHit[enemy] = 0
+                    end
+                    enemiesHit[enemy] = enemiesHit[enemy] + proj.damage
                 end
-                enemiesHit[enemy] = enemiesHit[enemy] + proj.damage
             end
         end
     end
@@ -449,12 +449,12 @@ end
 
 function EnemySystem:draw()
     for _, enemy in ipairs(self.enemies) do
-        if not enemy.alive then continue end
-        if enemy.phaseThrough and not enemy.isVisible then continue end
+        if not enemy.alive then goto continue_draw end
+        if enemy.phaseThrough and not enemy.isVisible then goto continue_draw end
         
         local screenX = enemy.x - self.cameraX
         if screenX + enemy.width < -50 or screenX > self.screenWidth + 50 then
-            continue
+            goto continue_draw
         end
         
         local alpha = enemy.phaseThrough and 0.7 or 1.0
@@ -508,6 +508,8 @@ function EnemySystem:draw()
             love.graphics.setColor(1, 0.3, 0.3, 1)
             love.graphics.rectangle("fill", barX, barY, barWidth * healthPercent, barHeight, 2, 2)
         end
+        
+        ::continue_draw::
     end
     
     for _, proj in ipairs(self.projectiles) do

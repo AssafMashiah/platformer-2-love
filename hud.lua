@@ -1,6 +1,15 @@
 HUD = {}
 HUD.__index = HUD
 
+local fonts = {}
+
+local function getFont(size)
+    if not fonts[size] then
+        fonts[size] = love.graphics.newFont(size)
+    end
+    return fonts[size]
+end
+
 function HUD:new()
     local instance = setmetatable({}, self)
     instance.health = 100
@@ -155,7 +164,7 @@ function HUD:drawHealth()
     love.graphics.rectangle("fill", healthBarX, healthBarY, healthBarWidth * healthPercent, healthBarHeight, 4, 4)
     
     love.graphics.setColor(1, 1, 1)
-    love.graphics.setFont(love.graphics.newFont(10))
+    love.graphics.setFont(getFont(10))
     love.graphics.print(math.floor(self.health) .. "/" .. self.maxHealth, healthBarX + 5, healthBarY - 1)
 end
 
@@ -194,7 +203,7 @@ function HUD:drawScore()
     love.graphics.rectangle("line", self.screenWidth - boxWidth - padding, padding, boxWidth, boxHeight, 5, 5)
     
     love.graphics.setColor(1, 1, 0.3)
-    love.graphics.setFont(love.graphics.newFont(16))
+    love.graphics.setFont(getFont(16))
     love.graphics.printf(scoreText, self.screenWidth - boxWidth - padding, padding + 7, boxWidth, "center")
 end
 
@@ -211,7 +220,7 @@ function HUD:drawLevel()
     love.graphics.rectangle("line", self.screenWidth - boxWidth - padding, y, boxWidth, boxHeight, 5, 5)
     
     love.graphics.setColor(0.5, 0.8, 1)
-    love.graphics.setFont(love.graphics.newFont(14))
+    love.graphics.setFont(getFont(14))
     love.graphics.printf("LEVEL " .. self.level, self.screenWidth - boxWidth - padding, y + 8, boxWidth, "center")
 end
 
@@ -238,11 +247,11 @@ function HUD:drawWeaponInfo()
     love.graphics.circle("fill", hudX + 22, hudY + 32, 5)
     
     love.graphics.setColor(1, 1, 1)
-    love.graphics.setFont(love.graphics.newFont(14))
+    love.graphics.setFont(getFont(14))
     love.graphics.print(weapon.name, hudX + 48, hudY + 10)
     
     love.graphics.setColor(0.7, 0.7, 0.7)
-    love.graphics.setFont(love.graphics.newFont(10))
+    love.graphics.setFont(getFont(10))
     local stats = string.format("DMG: %d  |  SPD: %d", weapon.damage, math.floor(weapon.projectileSpeed / 10))
     love.graphics.print(stats, hudX + 48, hudY + 28)
     
@@ -266,7 +275,7 @@ function HUD:drawWeaponInfo()
     love.graphics.rectangle("fill", cooldownX, cooldownY, cooldownWidth * cooldownProgress, cooldownHeight, 3, 3)
     
     love.graphics.setColor(1, 1, 1, 0.8)
-    love.graphics.setFont(love.graphics.newFont(8))
+    love.graphics.setFont(getFont(8))
     if cooldownProgress >= 1 then
         love.graphics.print("READY", cooldownX + cooldownWidth / 2 - 15, cooldownY - 2)
     else
@@ -278,7 +287,7 @@ function HUD:drawScorePopups()
     for _, popup in ipairs(self.scorePopups) do
         local alpha = popup.lifetime
         love.graphics.setColor(1, 1, 0.2, alpha)
-        love.graphics.setFont(love.graphics.newFont(14))
+        love.graphics.setFont(getFont(14))
         love.graphics.print(popup.text, popup.x, popup.y)
     end
 end
@@ -295,6 +304,16 @@ function HUD:drawMenu()
         love.graphics.line(0, y, self.screenWidth, y)
     end
     
+    local starCount = 50
+    for i = 1, starCount do
+        local sx = (i * 137.5) % self.screenWidth
+        local sy = (i * 73.7) % self.screenHeight
+        local size = ((i * 17) % 3) + 1
+        local twinkle = 0.3 + 0.7 * math.abs(math.sin(love.timer.getTime() * 2 + i))
+        love.graphics.setColor(1, 1, 1, twinkle * 0.6)
+        love.graphics.circle("fill", sx, sy, size)
+    end
+    
     local centerX = self.screenWidth / 2
     local centerY = self.screenHeight / 2
     
@@ -307,71 +326,74 @@ function HUD:drawMenu()
     if self.showControls then
         self:drawControlsScreen(centerX, centerY)
     else
+        local titleBob = math.sin(love.timer.getTime() * 2) * 5
         love.graphics.setColor(0.3, 0.7, 1)
-        love.graphics.setFont(love.graphics.newFont(36))
-        love.graphics.printf("PLATFORMER", centerX - 200, centerY - 150, 400, "center")
+        love.graphics.setFont(getFont(36))
+        love.graphics.printf("PLATFORMER", centerX - 200, centerY - 155 + titleBob, 400, "center")
         
         love.graphics.setColor(0.5, 0.9, 0.5)
-        love.graphics.setFont(love.graphics.newFont(14))
+        love.graphics.setFont(getFont(14))
         love.graphics.printf("Survive the onslaught!", centerX - 200, centerY - 100, 400, "center")
         
         for i, option in ipairs(self.menuOptions) do
             local y = centerY + (i - 1) * 50 - 30
             
             if i == self.menuSelection then
-                love.graphics.setColor(0, 0.8, 1, 0.3)
+                local pulse = 0.3 + 0.15 * math.sin(love.timer.getTime() * 4)
+                love.graphics.setColor(0, 0.8, 1, pulse)
                 love.graphics.rectangle("fill", centerX - 100, y - 5, 200, 35, 5, 5)
                 
                 love.graphics.setColor(0, 1, 0.5)
-                love.graphics.setFont(love.graphics.newFont(20))
+                love.graphics.setFont(getFont(20))
                 love.graphics.printf("> " .. option .. " <", centerX - 200, y, 400, "center")
             else
                 love.graphics.setColor(0.6, 0.6, 0.6)
-                love.graphics.setFont(love.graphics.newFont(18))
+                love.graphics.setFont(getFont(18))
                 love.graphics.printf(option, centerX - 200, y, 400, "center")
             end
         end
         
         love.graphics.setColor(0.4, 0.4, 0.4)
-        love.graphics.setFont(love.graphics.newFont(10))
+        love.graphics.setFont(getFont(10))
         love.graphics.printf("Use UP/DOWN or W/S to select", centerX - 200, centerY + 130, 400, "center")
     end
 end
 
 function HUD:drawControlsScreen(centerX, centerY)
     love.graphics.setColor(0.5, 0.8, 1)
-    love.graphics.setFont(love.graphics.newFont(28))
+    love.graphics.setFont(getFont(28))
     love.graphics.printf("CONTROLS", centerX - 200, centerY - 150, 400, "center")
     
     local controls = {
-        {"MOVE", "WASD or Arrow Keys"},
-        {"SHOOT", "SPACE"},
+        {"MOVE", "A/D or Left/Right Arrows"},
+        {"JUMP", "W, Up Arrow (double jump!)"},
+        {"SHOOT", "SPACE, Z, or F"},
         {"PAUSE", "P or ESC"},
-        {"MENU", "ESC"}
+        {"MUTE", "M"}
     }
     
     for i, ctrl in ipairs(controls) do
-        local y = centerY - 60 + (i - 1) * 40
+        local y = centerY - 70 + (i - 1) * 38
         
         love.graphics.setColor(0.3, 0.3, 0.3, 0.8)
         love.graphics.rectangle("fill", centerX - 150, y - 5, 300, 30, 5, 5)
         
         love.graphics.setColor(1, 1, 0.3)
-        love.graphics.setFont(love.graphics.newFont(14))
+        love.graphics.setFont(getFont(14))
         love.graphics.printf(ctrl[1], centerX - 200, y, 120, "right")
         
         love.graphics.setColor(1, 1, 1)
-        love.graphics.setFont(love.graphics.newFont(12))
+        love.graphics.setFont(getFont(12))
         love.graphics.printf(ctrl[2], centerX - 80, y, 280, "left")
     end
     
-    local backY = centerY + 110
+    local backY = centerY + 120
     if self.menuSelection == 1 then
         love.graphics.setColor(0, 1, 0.5)
     else
         love.graphics.setColor(0.5, 0.5, 0.5)
     end
-    love.graphics.setFont(love.graphics.newFont(16))
+    love.graphics.setFont(getFont(16))
     love.graphics.printf("< Back", centerX - 200, backY, 400, "center")
 end
 
@@ -388,15 +410,15 @@ function HUD:drawGameOver()
     love.graphics.rectangle("line", centerX - 250, centerY - 180, 500, 360, 10, 10)
     
     love.graphics.setColor(1, 0.2, 0.2)
-    love.graphics.setFont(love.graphics.newFont(48))
+    love.graphics.setFont(getFont(48))
     love.graphics.printf("GAME OVER", centerX - 250, centerY - 140, 500, "center")
     
     love.graphics.setColor(1, 1, 1)
-    love.graphics.setFont(love.graphics.newFont(24))
+    love.graphics.setFont(getFont(24))
     love.graphics.printf("Final Score: " .. self.score, centerX - 250, centerY - 50, 500, "center")
     
     love.graphics.setColor(0.7, 0.7, 0.7)
-    love.graphics.setFont(love.graphics.newFont(16))
+    love.graphics.setFont(getFont(16))
     love.graphics.printf("Level Reached: " .. self.level, centerX - 250, centerY - 10, 500, "center")
     
     if self.gameOverTimer > 1 then
@@ -407,7 +429,7 @@ function HUD:drawGameOver()
         else
             love.graphics.setColor(0.4, 0.4, 0.4)
         end
-        love.graphics.setFont(love.graphics.newFont(20))
+        love.graphics.setFont(getFont(20))
         love.graphics.printf("> Play Again <", centerX - 250, centerY + 50, 500, "center")
         
         if self.menuSelection == 2 then
@@ -415,7 +437,7 @@ function HUD:drawGameOver()
         else
             love.graphics.setColor(0.4, 0.4, 0.4)
         end
-        love.graphics.setFont(love.graphics.newFont(20))
+        love.graphics.setFont(getFont(20))
         love.graphics.printf("> Main Menu <", centerX - 250, centerY + 90, 500, "center")
     end
 end
@@ -508,11 +530,11 @@ function HUD:drawPause()
     love.graphics.rectangle("line", centerX - 150, centerY - 80, 300, 160, 10, 10)
     
     love.graphics.setColor(1, 1, 1)
-    love.graphics.setFont(love.graphics.newFont(32))
+    love.graphics.setFont(getFont(32))
     love.graphics.printf("PAUSED", centerX - 150, centerY - 50, 300, "center")
     
     love.graphics.setColor(0.7, 0.7, 0.7)
-    love.graphics.setFont(love.graphics.newFont(14))
+    love.graphics.setFont(getFont(14))
     love.graphics.printf("Press P or ESC to resume", centerX - 150, centerY + 20, 300, "center")
 end
 
