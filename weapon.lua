@@ -73,6 +73,7 @@ function WeaponSystem:new()
     instance.pickupSpawnInterval = 10
     instance.cameraX = 0
     instance.screenWidth = 800
+    instance.fonts = {}
     return instance
 end
 
@@ -269,6 +270,13 @@ function WeaponSystem:swapToSlot(slot)
     end
 end
 
+function WeaponSystem:getFont(size)
+    if not self.fonts[size] then
+        self.fonts[size] = love.graphics.newFont(size)
+    end
+    return self.fonts[size]
+end
+
 function WeaponSystem:drawHUD()
     local weapon = self:getCurrentWeapon()
     if not weapon then return end
@@ -288,11 +296,11 @@ function WeaponSystem:drawHUD()
     love.graphics.circle("fill", hudX + 25, hudY + 25, 12)
     
     love.graphics.setColor(1, 1, 1)
-    love.graphics.setFont(love.graphics.newFont(14))
+    love.graphics.setFont(self:getFont(14))
     love.graphics.print(weapon.name, hudX + 45, hudY + 10)
     
     love.graphics.setColor(0.7, 0.7, 0.7)
-    love.graphics.setFont(love.graphics.newFont(10))
+    love.graphics.setFont(self:getFont(10))
     local stats = string.format("DMG: %d  SPD: %d", weapon.damage, math.floor(weapon.projectileSpeed / 10))
     love.graphics.print(stats, hudX + 45, hudY + 28)
     
@@ -324,11 +332,11 @@ function WeaponSystem:drawPickups()
         love.graphics.rectangle("fill", screenX, y, pickup.width, pickup.height, 4, 4)
         
         love.graphics.setColor(1, 1, 1)
-        love.graphics.setFont(love.graphics.newFont(8))
+        love.graphics.setFont(self:getFont(8))
         love.graphics.printf("?", screenX, y + 6, pickup.width, "center")
         
         love.graphics.setColor(1, 1, 1, 0.8)
-        love.graphics.setFont(love.graphics.newFont(10))
+        love.graphics.setFont(self:getFont(10))
         love.graphics.printf(pickup.weapon.name, screenX - 10, y + pickup.height + 5, pickup.width + 20, "center")
         ::continue::
     end
