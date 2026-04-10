@@ -1,88 +1,105 @@
 # Platformer - Survive the Onslaught
 
-A LÖVE2D platformer shooter game where you fight waves of enemies across multiple platforms.
+A LÖVE2D side-scrolling platformer shooter. Fight enemies, collect weapons, reach the flag!
+
+## Play Online
+
+The game is automatically deployed to GitHub Pages:
+
+**https://assafmashiah.github.io/platformer-2-love**
+
+No installation needed - play directly in your browser.
+
+## Play Locally
+
+### Prerequisites
+- [LÖVE2D](https://love2d.org/) version 11.0+
+
+### Run
+```bash
+git clone https://github.com/AssafMashiah/platformer-2-love.git
+cd platformer-2-love
+love .
+```
 
 ## Controls
 
-### Movement
-- **WASD** or **Arrow Keys** - Move character
-- **W** or **Up Arrow** or **Space** - Jump (also shoots when in air)
-
-### Combat
-- **Space** - Shoot in the direction you're facing
-- Walk over weapon pickups to change weapons
-
-### Game Management
-- **P** or **Escape** - Pause/Resume game
-- **Enter** - Select menu option
-- **Escape** (in menu) - Quit game
+| Key | Action |
+|-----|--------|
+| WASD / Arrow Keys | Move |
+| W / Up / Space | Jump (double jump!) |
+| Space | Shoot |
+| P / Escape | Pause |
+| Enter | Menu select |
 
 ## Gameplay
 
 ### Objective
-Survive as long as possible while defeating enemies and accumulating points. Your score increases with each enemy defeated.
+Side-scroll through levels, defeat enemies, collect weapons, and reach the flag at the end of each level.
 
-### Levels
-- Levels increase every 500 points
-- Higher levels spawn more enemies at a faster rate
-- Enemy difficulty scales with level
-
-### Weapons
-Collect weapon pickups to change your weapon. Available weapons include:
-
+### Weapons (6 types)
 | Weapon | Color | Description |
 |--------|-------|-------------|
 | Pew Pew | Red | Fast single shot |
-| Triple Shot | Cyan | Three projectiles at once |
+| Triple Shot | Cyan | Three projectiles |
 | Heavy Blaster | Orange | Slow but powerful |
 | Rapid Fire | Green | Very fast weak shots |
-| Scatter Gun | Pink | Five projectiles spread out |
-| Laser Beam | Purple | Fast piercing shots |
+| Scatter Gun | Pink | Five-way spread |
+| Laser Beam | Purple | Piercing shots |
 
-### Enemies
-| Enemy | Color | Behavior |
-|-------|-------|----------|
-| Slime | Green | Patrols and hops |
-| Bat | Purple | Flies and chases |
-| Turret | Orange | Stationary, shoots at you |
-| Chaser | Red | Chases aggressively, can charge |
-| Ghost | Blue | Phases through platforms, flickers |
+### Enemies (5 types)
+| Enemy | Behavior |
+|-------|----------|
+| Slime | Patrols and jumps |
+| Bat | Flies and chases |
+| Turret | Stationary shooter |
+| Chaser | Aggressive charge |
+| Ghost | Phases through walls |
 
-### Health
-- Start with 100 health displayed as hearts
-- Taking damage flashes the screen red
-- Brief invulnerability after being hit
-- Game over when health reaches zero
+## Web Deployment
 
-## Running the Game
+The `.github/workflows/web.yml` workflow automatically:
+1. Builds the `.love` file
+2. Converts to web using [love.js](https://github.com/Davidobot/love.js)
+3. Deploys to GitHub Pages
 
-### Prerequisites
-- LÖVE2D (version 11.0 or higher)
+### Setup GitHub Pages
+1. Go to repo **Settings → Pages**
+2. Set **Source** to "GitHub Actions"
+3. Push to main - the workflow deploys automatically
 
-### Installation
+### Build Web Version Locally
 ```bash
-# Clone or download the repository
-cd platformer
-
-# Run with LÖVE
-love .
+npm install -g love.js
+zip game.love *.lua conf.lua
+love.js game.love web-build -t "Platformer" -c
+cp web/index.html web-build/index.html
+cd web-build && python3 -m http.server 8000
+# Open http://localhost:8000
 ```
 
-### File Structure
-```
-platformer/
-├── main.lua       # Main game logic and integration
-├── enemy.lua      # Enemy system with 5 enemy types
-├── weapon.lua     # Weapon system with 6 weapon types
-├── projectile.lua # Enhanced projectile system
-├── hud.lua        # Heads-up display and menus
-├── sound.lua      # Procedural sound effects
-└── README.md      # This file
+### Quick Play (no build)
+Upload `game.love` to [love2d.org/play](https://love2d.org/play):
+```bash
+zip game.love *.lua conf.lua
 ```
 
-## Tips
-- Stay mobile! Enemies will chase you
-- Platform height matters - use it to your advantage
-- Different weapons suit different situations
-- Watch your cooldown bar before engaging tough enemies
-- Ghosts can attack from unexpected angles since they phase through platforms
+## File Structure
+```
+├── main.lua       # Game loop, camera, states
+├── enemy.lua      # Enemy system (5 types)
+├── weapon.lua     # Weapon system (6 types)
+├── projectile.lua # Projectile physics
+├── hud.lua        # UI and menus
+├── sound.lua      # Procedural SFX
+├── conf.lua       # LÖVE config
+├── save.lua       # Save/load system
+├── web/
+│   └── index.html # Web launcher
+├── .github/
+│   └── workflows/
+│       └── web.yml
+├── SPEC.md        # Technical spec
+├── AGENTS.md      # Agent workflow
+└── README.md
+```
