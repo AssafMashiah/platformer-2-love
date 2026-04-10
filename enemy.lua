@@ -126,6 +126,7 @@ function EnemySystem:generateEnemy(x, y, forceType)
         projectileSpeed = enemyData.projectileSpeed or 300,
         jumpHeight = enemyData.jumpHeight or 150,
         chargeCooldown = enemyData.chargeCooldown or 3,
+        chargeSpeed = enemyData.chargeSpeed or 180,
         chargeTimer = 0,
         isCharging = false,
         phaseThrough = enemyData.phaseThrough or false,
@@ -183,15 +184,18 @@ function EnemySystem:update(dt, player, platforms)
         self:spawnRandomEnemy()
     end
     
+    local deadEnemies = {}
     for i = #self.enemies, 1, -1 do
-        local enemy = self.enemies[i]
-        
-        if not enemy.alive then
-            table.remove(self.enemies, i)
-            continue
+        if not self.enemies[i].alive then
+            table.insert(deadEnemies, i)
         end
-        
-        if enemy.phaseThrough then
+    end
+    for _, idx in ipairs(deadEnemies) do
+        table.remove(self.enemies, idx)
+    end
+    
+    for _, enemy in ipairs(self.enemies) do
+        if enemy.phaseThrough and enemy.flickerRate then
             enemy.flickerTimer = enemy.flickerTimer + dt * enemy.flickerRate
             if enemy.flickerTimer >= 1 then
                 enemy.flickerTimer = 0
@@ -221,6 +225,7 @@ function EnemySystem:update(dt, player, platforms)
         enemy.x = math.max(0, math.min(self.screenWidth - enemy.width, enemy.x))
     end
     
+    local deadProjectiles = {}
     for i = #self.projectiles, 1, -1 do
         local proj = self.projectiles[i]
         proj.x = proj.x + proj.vx * dt
@@ -230,8 +235,11 @@ function EnemySystem:update(dt, player, platforms)
         if proj.lifetime <= 0 or 
            proj.x < -50 or proj.x > self.screenWidth + 50 or 
            proj.y < -50 or proj.y > self.screenHeight + 50 then
-            table.remove(self.projectiles, i)
+            table.insert(deadProjectiles, i)
         end
+    end
+    for _, idx in ipairs(deadProjectiles) do
+        table.remove(self.projectiles, idx)
     end
 end
 
@@ -255,7 +263,9 @@ function EnemySystem:updateChase(enemy, dt, player, playerDist)
         local dirX = (player.x - enemy.x) / playerDist
         local dirY = (player.y - enemy.y) / playerDist
         
-        if enemy.isCharging then
+        local canCharge = enemy.chargeSpeed and enemy.chargeSpeed > 0
+        
+        if canCharge and enemy.isCharging then
             enemy.velocityX = dirX * enemy.chargeSpeed
             enemy.velocityY = dirY * enemy.chargeSpeed
             enemy.chargeTimer = enemy.chargeTimer - dt
@@ -267,10 +277,11 @@ function EnemySystem:updateChase(enemy, dt, player, playerDist)
         else
             enemy.velocityX = dirX * enemy.speed
             enemy.velocityY = dirY * enemy.speed * 0.5
-            enemy.chargeTimer = enemy.chargeTimer - dt
-            
-            if enemy.chargeTimer <= 0 and playerDist < 150 then
-                enemy.isCharging = true
+            if canCharge then
+                enemy.chargeTimer = enemy.chargeTimer - dt
+                if enemy.chargeTimer <= 0 and playerDist < 150 then
+                    enemy.isCharging = true
+                end
             end
         end
     else
@@ -326,21 +337,14 @@ function EnemySystem:applyGravity(enemy, dt, platforms)
         enemy.velocityY = 400
     end
     
-    enemy.grounded = false
-    
     for _, platform in ipairs(platforms) do
-        local bounds = platform.getBounds and platform:getBounds() or {
-            left = platform.x,
-            right = (platform.x or 0) + (platform.width or 0),
-            top = platform.y,
-            bottom = (platform.y or 0) + (platform.height or 0)
-        }
+        local bounds = platform.getBounds and platform:getBounds() or {left = platform.x, right = platform.x + platform.width, top = platform.y}
         
         local prevBottom = enemy.y + enemy.height - enemy.velocityY * dt
         local currBottom = enemy.y + enemy.height
         
         if enemy.x + enemy.width > bounds.left and enemy.x < bounds.right then
-            if prevBottom <= bounds.top and currBottom >= bounds.top and enemy.velocityY >= 0 then
+            if prevBottom <= bounds.top and currBottom >= bounds.top then
                 enemy.y = bounds.top - enemy.height
                 enemy.velocityY = 0
                 enemy.grounded = true
@@ -358,12 +362,11 @@ function EnemySystem:checkPlayerCollision(player)
     local damageTaken = 0
     
     for _, enemy in ipairs(self.enemies) do
-        if not enemy.alive then continue end
-        if enemy.phaseThrough and not enemy.isVisible then continue end
-        
-        if self:rectsCollide(player.x, player.y, player.width, player.height,
-                             enemy.x, enemy.y, enemy.width, enemy.height) then
-            damageTaken = damageTaken + enemy.damage
+        if enemy.alive and (not enemy.phaseThrough or enemy.isVisible) then
+            if self:rectsCollide(player.x, player.y, player.width, player.height,
+                                 enemy.x, enemy.y, enemy.width, enemy.height) then
+                damageTaken = damageTaken + enemy.damage
+            end
         end
     end
     
@@ -372,6 +375,7 @@ end
 
 function EnemySystem:checkProjectileCollision(player)
     local damageTaken = 0
+    local hitProjectiles = {}
     
     for i = #self.projectiles, 1, -1 do
         local proj = self.projectiles[i]
@@ -380,8 +384,12 @@ function EnemySystem:checkProjectileCollision(player)
                             proj.x - proj.size, proj.y - proj.size, 
                             proj.size * 2, proj.size * 2) then
             damageTaken = damageTaken + proj.damage
-            table.remove(self.projectiles, i)
+            table.insert(hitProjectiles, i)
         end
+    end
+    
+    for _, idx in ipairs(hitProjectiles) do
+        table.remove(self.projectiles, idx)
     end
     
     return damageTaken
@@ -392,15 +400,15 @@ function EnemySystem:checkProjectileHit(projectiles)
     
     for _, proj in ipairs(projectiles) do
         for _, enemy in ipairs(self.enemies) do
-            if not enemy.alive then continue end
-            
-            if self:rectsCollide(proj.x - proj.size, proj.y - proj.size, 
-                                proj.size * 2, proj.size * 2,
-                                enemy.x, enemy.y, enemy.width, enemy.height) then
-                if not enemiesHit[enemy] then
-                    enemiesHit[enemy] = 0
+            if enemy.alive then
+                if self:rectsCollide(proj.x - proj.size, proj.y - proj.size, 
+                                    proj.size * 2, proj.size * 2,
+                                    enemy.x, enemy.y, enemy.width, enemy.height) then
+                    if not enemiesHit[enemy] then
+                        enemiesHit[enemy] = 0
+                    end
+                    enemiesHit[enemy] = enemiesHit[enemy] + proj.damage
                 end
-                enemiesHit[enemy] = enemiesHit[enemy] + proj.damage
             end
         end
     end
@@ -448,78 +456,82 @@ function EnemySystem:setScreenSize(width, height)
 end
 
 function EnemySystem:draw()
+    local camX = self.cameraX
     for _, enemy in ipairs(self.enemies) do
-        if not enemy.alive then continue end
-        if enemy.phaseThrough and not enemy.isVisible then continue end
-        
-        local screenX = enemy.x - self.cameraX
-        if screenX + enemy.width < -50 or screenX > self.screenWidth + 50 then
-            continue
-        end
-        
-        local alpha = enemy.phaseThrough and 0.7 or 1.0
-        
-        love.graphics.setColor(0, 0, 0, alpha * 0.4)
-        love.graphics.ellipse("fill", screenX + enemy.width / 2 + 3, 
-                               enemy.y + enemy.height + 5, 
-                               enemy.width / 2, 5)
-        
-        love.graphics.setColor(enemy.color[1] * 0.5, enemy.color[2] * 0.5, enemy.color[3] * 0.5, alpha)
-        love.graphics.ellipse("fill", screenX + enemy.width / 2, 
-                              enemy.y + enemy.height, 
-                              enemy.width / 2 + 4, 8)
-        
-        love.graphics.setColor(enemy.color[1], enemy.color[2], enemy.color[3], alpha)
-        love.graphics.ellipse("fill", screenX + enemy.width / 2, 
-                              enemy.y + enemy.height / 2 + 5, 
-                              enemy.width / 2, enemy.height / 2)
-        
-        love.graphics.setColor(math.min(1, enemy.color[1] + 0.2), 
-                               math.min(1, enemy.color[2] + 0.2), 
-                               math.min(1, enemy.color[3] + 0.2), alpha)
-        love.graphics.ellipse("fill", screenX + enemy.width / 2, 
-                              enemy.y + enemy.height / 2 - 5, 
-                              enemy.width / 3, enemy.height / 3)
-        
-        if enemy.behavior == "shoot" then
-            love.graphics.setColor(1, 0.3, 0.3, alpha)
-            love.graphics.circle("fill", screenX + enemy.width / 2, 
-                                 enemy.y + enemy.height / 3, 4)
-        end
-        
-        if enemy.isCharging then
-            love.graphics.setColor(1, 1, 0, 0.3)
-            love.graphics.setLineWidth(2)
-            love.graphics.circle("line", screenX + enemy.width / 2, 
-                                enemy.y + enemy.height / 2, 
-                                enemy.width, love.timer.getTime() * 10 % math.pi * 2)
-        end
-        
-        if enemy.health < enemy.maxHealth then
-            local barWidth = enemy.width
-            local barHeight = 4
-            local barX = screenX
-            local barY = enemy.y - 10
-            local healthPercent = enemy.health / enemy.maxHealth
+        if enemy.alive and (not enemy.phaseThrough or enemy.isVisible) then
+            local screenX = enemy.x - camX
+            if screenX + enemy.width < -100 or screenX > self.screenWidth + 100 then
+                goto continue
+            end
+            local alpha = enemy.phaseThrough and 0.7 or 1.0
             
-            love.graphics.setColor(0.3, 0.3, 0.3, 0.8)
-            love.graphics.rectangle("fill", barX, barY, barWidth, barHeight, 2, 2)
+            love.graphics.setColor(0, 0, 0, alpha * 0.4)
+            love.graphics.ellipse("fill", screenX + enemy.width / 2 + 3, 
+                                   enemy.y + enemy.height + 5, 
+                                   enemy.width / 2, 5)
             
-            love.graphics.setColor(1, 0.3, 0.3, 1)
-            love.graphics.rectangle("fill", barX, barY, barWidth * healthPercent, barHeight, 2, 2)
+            love.graphics.setColor(enemy.color[1] * 0.5, enemy.color[2] * 0.5, enemy.color[3] * 0.5, alpha)
+            love.graphics.ellipse("fill", screenX + enemy.width / 2, 
+                                  enemy.y + enemy.height, 
+                                  enemy.width / 2 + 4, 8)
+            
+            love.graphics.setColor(enemy.color[1], enemy.color[2], enemy.color[3], alpha)
+            love.graphics.ellipse("fill", screenX + enemy.width / 2, 
+                                  enemy.y + enemy.height / 2 + 5, 
+                                  enemy.width / 2, enemy.height / 2)
+            
+            love.graphics.setColor(math.min(1, enemy.color[1] + 0.2), 
+                                   math.min(1, enemy.color[2] + 0.2), 
+                                   math.min(1, enemy.color[3] + 0.2), alpha)
+            love.graphics.ellipse("fill", screenX + enemy.width / 2, 
+                                  enemy.y + enemy.height / 2 - 5, 
+                                  enemy.width / 3, enemy.height / 3)
+            
+            if enemy.behavior == "shoot" then
+                love.graphics.setColor(1, 0.3, 0.3, alpha)
+                love.graphics.circle("fill", screenX + enemy.width / 2, 
+                                     enemy.y + enemy.height / 3, 4)
+            end
+            
+            if enemy.isCharging then
+                love.graphics.setColor(1, 1, 0, 0.3)
+                love.graphics.setLineWidth(2)
+                love.graphics.circle("line", screenX + enemy.width / 2, 
+                                    enemy.y + enemy.height / 2, 
+                                    enemy.width, love.timer.getTime() * 10 % math.pi * 2)
+            end
+            
+            if enemy.health < enemy.maxHealth then
+                local barWidth = enemy.width
+                local barHeight = 4
+                local barX = screenX
+                local barY = enemy.y - 10
+                local healthPercent = enemy.health / enemy.maxHealth
+                
+                love.graphics.setColor(0.3, 0.3, 0.3, 0.8)
+                love.graphics.rectangle("fill", barX, barY, barWidth, barHeight, 2, 2)
+                
+                love.graphics.setColor(1, 0.3, 0.3, 1)
+                love.graphics.rectangle("fill", barX, barY, barWidth * healthPercent, barHeight, 2, 2)
+            end
         end
+        ::continue::
     end
     
     for _, proj in ipairs(self.projectiles) do
-        local projScreenX = proj.x - self.cameraX
+        local screenX = proj.x - camX
+        if screenX < -50 or screenX > self.screenWidth + 50 then
+            goto continue_proj
+        end
         love.graphics.setColor(proj.color[1], proj.color[2], proj.color[3])
-        love.graphics.circle("fill", projScreenX, proj.y, proj.size)
+        love.graphics.circle("fill", screenX, proj.y, proj.size)
         
         love.graphics.setColor(1, 1, 1, 0.6)
-        love.graphics.circle("fill", projScreenX, proj.y, proj.size * 0.4)
+        love.graphics.circle("fill", screenX, proj.y, proj.size * 0.4)
         
         love.graphics.setColor(proj.color[1], proj.color[2], proj.color[3], 0.3)
-        love.graphics.circle("fill", projScreenX, proj.y, proj.size * 1.5)
+        love.graphics.circle("fill", screenX, proj.y, proj.size * 1.5)
+        ::continue_proj::
     end
 end
 

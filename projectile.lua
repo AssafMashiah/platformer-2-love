@@ -74,9 +74,6 @@ function ProjectileSystem:new()
     instance.screenWidth = 800
     instance.screenHeight = 600
     instance.graphicsCache = {}
-    instance.levelStart = 0
-    instance.levelEnd = 4000
-    instance.cameraX = 0
     return instance
 end
 
@@ -162,6 +159,7 @@ function ProjectileSystem:fireAtPoint(config)
 end
 
 function ProjectileSystem:update(dt)
+    local deadProjectiles = {}
     for i = #self.projectiles, 1, -1 do
         local proj = self.projectiles[i]
         
@@ -182,11 +180,15 @@ function ProjectileSystem:update(dt)
         end
         
         if proj.lifetime <= 0 or 
-           proj.x < -50 or proj.x > self.screenWidth + 50 or 
-           proj.y < -50 or proj.y > self.screenHeight + 50 or
+           proj.x < -500 or proj.x > (self.levelEnd or self.screenWidth) + 500 or 
+           proj.y < -500 or proj.y > self.screenHeight + 500 or
            proj.hitsRemaining <= 0 then
-            table.remove(self.projectiles, i)
+            table.insert(deadProjectiles, i)
         end
+    end
+    
+    for _, idx in ipairs(deadProjectiles) do
+        table.remove(self.projectiles, idx)
     end
 end
 
@@ -196,18 +198,18 @@ function ProjectileSystem:checkCollisionWithRect(targetX, targetY, targetWidth, 
     for i = #self.projectiles, 1, -1 do
         local proj = self.projectiles[i]
         
-        if proj.owner == owner then continue end
-        
-        if self:rectsCollide(proj.x - proj.size, proj.y - proj.size,
-                            proj.size * 2, proj.size * 2,
-                            targetX, targetY, targetWidth, targetHeight) then
-            table.insert(hitProjectiles, {
-                projectile = proj,
-                index = i,
-                damage = proj.damage
-            })
-            
-            proj.hitsRemaining = proj.hitsRemaining - 1
+        if proj.owner ~= owner then
+            if self:rectsCollide(proj.x - proj.size, proj.y - proj.size,
+                                proj.size * 2, proj.size * 2,
+                                targetX, targetY, targetWidth, targetHeight) then
+                table.insert(hitProjectiles, {
+                    projectile = proj,
+                    index = i,
+                    damage = proj.damage
+                })
+                
+                proj.hitsRemaining = proj.hitsRemaining - 1
+            end
         end
     end
     
@@ -229,28 +231,26 @@ function ProjectileSystem:checkPlayerProjectilesVsEnemies(enemies)
     local enemiesHit = {}
     local totalScore = 0
     
-    for i = #self.projectiles, 1, -1 do
-        local proj = self.projectiles[i]
-        
-        if not proj.isPlayerOwned then continue end
-        
-        for _, enemy in ipairs(enemies) do
-            if not enemy.alive then continue end
-            
-            local enemyWidth = enemy.width or (enemy.size and enemy.size * 2) or 32
-            local enemyHeight = enemy.height or (enemy.size and enemy.size * 2) or 32
-            
-            if self:rectsCollide(proj.x - proj.size, proj.y - proj.size,
-                                proj.size * 2, proj.size * 2,
-                                enemy.x, enemy.y, enemyWidth, enemyHeight) then
-                
-                if not enemiesHit[enemy] then
-                    enemiesHit[enemy] = 0
-                end
-                enemiesHit[enemy] = enemiesHit[enemy] + proj.damage
-                
-                if not proj.piercing then
-                    proj.hitsRemaining = 0
+    for _, proj in ipairs(self.projectiles) do
+        if proj.isPlayerOwned then
+            for _, enemy in ipairs(enemies) do
+                if enemy.alive then
+                    local enemyWidth = enemy.width or (enemy.size and enemy.size * 2) or 32
+                    local enemyHeight = enemy.height or (enemy.size and enemy.size * 2) or 32
+                    
+                    if self:rectsCollide(proj.x - proj.size, proj.y - proj.size,
+                                        proj.size * 2, proj.size * 2,
+                                        enemy.x, enemy.y, enemyWidth, enemyHeight) then
+                        
+                        if not enemiesHit[enemy] then
+                            enemiesHit[enemy] = 0
+                        end
+                        enemiesHit[enemy] = enemiesHit[enemy] + proj.damage
+                        
+                        if not proj.piercing then
+                            proj.hitsRemaining = 0
+                        end
+                    end
                 end
             end
         end
@@ -270,16 +270,14 @@ end
 function ProjectileSystem:checkEnemyProjectilesVsPlayer(player)
     local damageTaken = 0
     
-    for i = #self.projectiles, 1, -1 do
-        local proj = self.projectiles[i]
-        
-        if proj.isPlayerOwned then continue end
-        
-        if self:rectsCollide(proj.x - proj.size, proj.y - proj.size,
-                            proj.size * 2, proj.size * 2,
-                            player.x, player.y, player.width or 32, player.height or 32) then
-            damageTaken = damageTaken + proj.damage
-            proj.hitsRemaining = 0
+    for _, proj in ipairs(self.projectiles) do
+        if not proj.isPlayerOwned then
+            if self:rectsCollide(proj.x - proj.size, proj.y - proj.size,
+                                proj.size * 2, proj.size * 2,
+                                player.x, player.y, player.width or 32, player.height or 32) then
+                damageTaken = damageTaken + proj.damage
+                proj.hitsRemaining = 0
+            end
         end
     end
     
@@ -366,58 +364,57 @@ function ProjectileSystem:setCameraX(camX)
 end
 
 function ProjectileSystem:draw()
+    local camX = self.cameraX or 0
     for _, proj in ipairs(self.projectiles) do
-        local screenX = proj.x - self.cameraX
-        if screenX >= -50 and screenX <= self.screenWidth + 50 then
+        local screenX = proj.x - camX
+        if screenX >= -100 and screenX <= self.screenWidth + 100 then
             self:drawProjectile(proj, screenX)
         end
     end
 end
 
 function ProjectileSystem:drawProjectile(proj, screenX)
-    screenX = screenX or (proj.x - self.cameraX)
-    local screenY = proj.y
-    
+    local camX = self.cameraX or 0
+    screenX = screenX or (proj.x - camX)
     if proj.hasTrail then
         for i, point in ipairs(proj.trail) do
             local trailSize = proj.size * (1 - (i - 1) / proj.trailLength) * 0.7
-            local trailScreenX = point.x - self.cameraX
             
             love.graphics.setColor(proj.color[1], proj.color[2], proj.color[3], point.alpha * 0.4)
-            love.graphics.circle("fill", trailScreenX, point.y, trailSize)
+            love.graphics.circle("fill", point.x - camX, point.y, trailSize)
         end
     end
     
     love.graphics.setColor(proj.color[1], proj.color[2], proj.color[3], 0.3)
-    love.graphics.circle("fill", screenX, screenY, proj.size * 2)
+    love.graphics.circle("fill", screenX, proj.y, proj.size * 2)
     
     love.graphics.setColor(proj.color[1], proj.color[2], proj.color[3], 0.6)
-    love.graphics.circle("fill", screenX, screenY, proj.size * 1.3)
+    love.graphics.circle("fill", screenX, proj.y, proj.size * 1.3)
     
     love.graphics.setColor(proj.color[1], proj.color[2], proj.color[3])
     if proj.shape == "line" then
         local length = proj.size * 3
         local endX = screenX - math.cos(proj.rotation) * length
-        local endY = screenY - math.sin(proj.rotation) * length
+        local endY = proj.y - math.sin(proj.rotation) * length
         love.graphics.setLineWidth(proj.size * 0.6)
-        love.graphics.line(screenX, screenY, endX, endY)
+        love.graphics.line(screenX, proj.y, endX, endY)
     else
-        love.graphics.circle("fill", screenX, screenY, proj.size)
+        love.graphics.circle("fill", screenX, proj.y, proj.size)
     end
     
     love.graphics.setColor(1, 1, 1, 0.8)
     if proj.shape == "line" then
         local length = proj.size * 1.5
         local endX = screenX - math.cos(proj.rotation) * length
-        local endY = screenY - math.sin(proj.rotation) * length
+        local endY = proj.y - math.sin(proj.rotation) * length
         love.graphics.setLineWidth(proj.size * 0.3)
-        love.graphics.line(screenX, screenY, endX, endY)
+        love.graphics.line(screenX, proj.y, endX, endY)
     else
-        love.graphics.circle("fill", screenX, screenY, proj.size * 0.4)
+        love.graphics.circle("fill", screenX, proj.y, proj.size * 0.4)
     end
     
     love.graphics.setColor(proj.glowColor[1], proj.glowColor[2], proj.glowColor[3], 0.2)
-    love.graphics.circle("fill", screenX, screenY, proj.size * 2.5)
+    love.graphics.circle("fill", screenX, proj.y, proj.size * 2.5)
 end
 
 function ProjectileSystem:reset()

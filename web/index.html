@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, minimum-scale=1, maximum-scale=1">
+    <title>Platformer - Survive the Onslaught</title>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body {
+        background: #0a0a1a;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        font-family: 'Courier New', monospace;
+        color: #eee;
+      }
+      h1 {
+        color: #e94560;
+        margin-bottom: 10px;
+        font-size: 28px;
+        text-shadow: 0 0 20px rgba(233,69,96,0.5);
+      }
+      #game-container {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 15px;
+      }
+      #canvas-wrapper {
+        position: relative;
+        border: 3px solid #e94560;
+        border-radius: 6px;
+        box-shadow: 0 0 40px rgba(233,69,96,0.3);
+        overflow: hidden;
+      }
+      #loadingCanvas {
+        display: block;
+        background: #000;
+        image-rendering: pixelated;
+      }
+      #canvas {
+        display: none;
+        background: #000;
+        image-rendering: pixelated;
+      }
+      .controls-panel {
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(233,69,96,0.3);
+        border-radius: 8px;
+        padding: 15px 25px;
+        max-width: 800px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px 30px;
+      }
+      .controls-panel h3 {
+        color: #e94560;
+        grid-column: 1 / -1;
+        margin-bottom: 5px;
+      }
+      .controls-panel .key {
+        color: #e94560;
+        font-weight: bold;
+      }
+      footer {
+        margin-top: 10px;
+        color: #888;
+        font-size: 12px;
+        text-align: center;
+      }
+      footer a { color: #e94560; }
+      .fullscreen-btn {
+        background: rgba(233,69,96,0.8);
+        color: #fff;
+        border: none;
+        padding: 5px 12px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-family: inherit;
+        font-size: 12px;
+      }
+      .fullscreen-btn:hover { background: #e94560; }
+    </style>
+  </head>
+  <body>
+    <h1>Platformer - Survive the Onslaught</h1>
+    <div id="game-container">
+      <div id="canvas-wrapper">
+        <canvas id="loadingCanvas" oncontextmenu="event.preventDefault()" width="800" height="600"></canvas>
+        <canvas id="canvas" oncontextmenu="event.preventDefault()"></canvas>
+      </div>
+      <div>
+        <button class="fullscreen-btn" onclick="goFullScreen()">Fullscreen</button>
+      </div>
+      <div class="controls-panel">
+        <h3>Controls</h3>
+        <div><span class="key">WASD / Arrows</span> - Move</div>
+        <div><span class="key">W / Up / Space</span> - Jump (double jump!)</div>
+        <div><span class="key">Space</span> - Shoot</div>
+        <div><span class="key">P / Esc</span> - Pause</div>
+      </div>
+    </div>
+
+    <script type="text/javascript">
+      function goFullScreen() {
+        var canvas = document.getElementById("canvas");
+        if (canvas.requestFullscreen) canvas.requestFullscreen();
+        else if (canvas.webkitRequestFullscreen) canvas.webkitRequestFullscreen();
+        else if (canvas.mozRequestFullScreen) canvas.mozRequestFullScreen();
+      }
+
+      var loadingContext = document.getElementById('loadingCanvas').getContext('2d');
+      function drawLoadingText(text) {
+        var canvas = loadingContext.canvas;
+        loadingContext.fillStyle = "#0a0a1a";
+        loadingContext.fillRect(0, 0, canvas.scrollWidth, canvas.scrollHeight);
+        loadingContext.font = '2em "Courier New", monospace';
+        loadingContext.textAlign = 'center';
+        loadingContext.fillStyle = "#e94560";
+        loadingContext.fillText(text, canvas.scrollWidth / 2, canvas.scrollHeight / 2);
+        loadingContext.font = '1em "Courier New", monospace';
+        loadingContext.fillStyle = "#888";
+        loadingContext.fillText("Powered by LÖVE & Emscripten", canvas.scrollWidth / 2, canvas.scrollHeight / 2 + 40);
+      }
+
+      window.onload = function () { window.focus(); };
+      window.onclick = function () { window.focus(); };
+
+      window.addEventListener("keydown", function(e) {
+        if([32, 37, 38, 39, 40].indexOf(e.keyCode) > -1) {
+          e.preventDefault();
+        }
+      }, false);
+
+      var Module = {
+        arguments: ['./game.love'],
+        INITIAL_MEMORY: 16777216,
+        printErr: console.error.bind(console),
+        canvas: (function() {
+          var canvas = document.getElementById('canvas');
+          canvas.addEventListener("webglcontextlost", function(e) {
+            alert('WebGL context lost. You will need to reload the page.');
+            e.preventDefault();
+          }, false);
+          return canvas;
+        })(),
+        setStatus: function(text) {
+          if (text) {
+            drawLoadingText(text);
+          } else if (Module.remainingDependencies === 0) {
+            document.getElementById('loadingCanvas').style.display = 'none';
+            var gameCanvas = document.getElementById('canvas');
+            gameCanvas.style.display = 'block';
+            gameCanvas.style.visibility = 'visible';
+          }
+        },
+        totalDependencies: 0,
+        remainingDependencies: 0,
+        monitorRunDependencies: function(left) {
+          this.remainingDependencies = left;
+          this.totalDependencies = Math.max(this.totalDependencies, left);
+          Module.setStatus(left ? 'Preparing... (' + (this.totalDependencies - left) + '/' + this.totalDependencies + ')' : 'All downloads complete.');
+        }
+      };
+      Module.setStatus('Downloading...');
+      window.onerror = function(event) {
+        Module.setStatus('Exception thrown, see JavaScript console');
+        Module.setStatus = function(text) {
+          if (text) Module.printErr('[post-exception status] ' + text);
+        };
+      };
+
+      var applicationLoad = function(e) {
+        Love(Module);
+      };
+    </script>
+    <script type="text/javascript" src="game.js"></script>
+    <script async type="text/javascript" src="love.js" onload="applicationLoad(this)"></script>
+
+    <footer>
+      <p>Built with <a href="https://github.com/Davidobot/love.js">love.js</a> | <button class="fullscreen-btn" onclick="goFullScreen()">Go Fullscreen</button><br>Hint: Reload the page if screen is blank</p>
+    </footer>
+  </body>
+</html>

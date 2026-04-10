@@ -165,7 +165,7 @@ function sound.play(soundName)
     
     local src = sound.sounds[soundName]
     if src then
-        local newSrc = love.audio.newSource(src)
+        local newSrc = src:clone()
         newSrc:setVolume(0.5)
         newSrc:play()
     end

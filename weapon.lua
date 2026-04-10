@@ -60,19 +60,28 @@ local WEAPON_TYPES = {
 
 function WeaponSystem:new()
     local instance = setmetatable({}, self)
-    instance.currentWeapon = instance:generateRandomWeapon()
+    instance.MAX_INVENTORY = 4
+    instance.inventory = {}
+    instance.currentSlot = 1
+    local startingWeapon = instance:generateRandomWeapon()
+    table.insert(instance.inventory, startingWeapon)
     instance.lastFireTime = 0
     instance.canFire = true
     instance.projectiles = {}
     instance.pickups = {}
     instance.pickupSpawnTimer = 0
     instance.pickupSpawnInterval = 10
-    instance.screenWidth = 800
-    instance.screenHeight = 600
-    instance.levelStart = 0
-    instance.levelEnd = 4000
     instance.cameraX = 0
+    instance.screenWidth = 800
     return instance
+end
+
+function WeaponSystem:setCameraX(camX)
+    self.cameraX = camX
+end
+
+function WeaponSystem:setScreenWidth(width)
+    self.screenWidth = width
 end
 
 function WeaponSystem:generateRandomWeapon()
@@ -113,24 +122,12 @@ function WeaponSystem:spawnPickup(x, y)
     table.insert(self.pickups, self:generatePickup(x, y))
 end
 
-function WeaponSystem:setLevelBounds(start, levelEnd)
-    self.levelStart = start
-    self.levelEnd = levelEnd
-end
-
-function WeaponSystem:setCameraX(camX)
-    self.cameraX = camX
-end
-
 function WeaponSystem:update(dt, screenWidth, screenHeight)
-    self.screenWidth = screenWidth
-    self.screenHeight = screenHeight
-    
     self.pickupSpawnTimer = self.pickupSpawnTimer + dt
     
     if self.pickupSpawnTimer >= self.pickupSpawnInterval then
         self.pickupSpawnTimer = 0
-        local x = math.random(self.levelStart + 50, self.levelEnd - 50)
+        local x = math.random(50, screenWidth - 50)
         local y = math.random(50, screenHeight - 200)
         self:spawnPickup(x, y)
     end
@@ -145,7 +142,7 @@ function WeaponSystem:update(dt, screenWidth, screenHeight)
         proj.x = proj.x + proj.vx * dt
         proj.y = proj.y + proj.vy * dt
         
-        if proj.x < self.levelStart - 50 or proj.x > self.levelEnd + 50 or 
+        if proj.x < -50 or proj.x > screenWidth + 50 or 
            proj.y < -50 or proj.y > screenHeight + 50 then
             table.remove(self.projectiles, i)
         end
@@ -155,14 +152,17 @@ end
 function WeaponSystem:fire(x, y, directionX, directionY, currentTime)
     if not self.canFire then return {} end
     
-    if currentTime - self.lastFireTime < self.currentWeapon.fireRate then
+    local weapon = self:getCurrentWeapon()
+    if not weapon then return {} end
+    
+    if currentTime - self.lastFireTime < weapon.fireRate then
         return {}
     end
     
     self.lastFireTime = currentTime
     local newProjectiles = {}
     
-    local count = self.currentWeapon.projectileCount
+    local count = weapon.projectileCount
     local spread = 0.15
     
     for i = 1, count do
@@ -173,17 +173,17 @@ function WeaponSystem:fire(x, y, directionX, directionY, currentTime)
             angle = angle + offset
         end
         
-        local vx = math.cos(angle) * self.currentWeapon.projectileSpeed
-        local vy = math.sin(angle) * self.currentWeapon.projectileSpeed
+        local vx = math.cos(angle) * weapon.projectileSpeed
+        local vy = math.sin(angle) * weapon.projectileSpeed
         
         table.insert(newProjectiles, {
             x = x,
             y = y,
             vx = vx,
             vy = vy,
-            size = self.currentWeapon.size,
-            damage = self.currentWeapon.damage,
-            color = self.currentWeapon.color
+            size = weapon.size,
+            damage = weapon.damage,
+            color = weapon.color
         })
         
         table.insert(self.projectiles, newProjectiles[#newProjectiles])
@@ -210,7 +210,22 @@ function WeaponSystem:checkPickupCollision(playerX, playerY, playerWidth, player
     end
     
     if collected then
-        self.currentWeapon = collected
+        local isDuplicate = false
+        for _, w in ipairs(self.inventory) do
+            if w.name == collected.name then
+                isDuplicate = true
+                break
+            end
+        end
+        
+        if not isDuplicate then
+            if #self.inventory < self.MAX_INVENTORY then
+                table.insert(self.inventory, collected)
+                self.currentSlot = #self.inventory
+            else
+                self.inventory[self.currentSlot] = collected
+            end
+        end
     end
     
     return collected
@@ -225,11 +240,38 @@ function WeaponSystem:getPickups()
 end
 
 function WeaponSystem:getCurrentWeapon()
-    return self.currentWeapon
+    return self.inventory[self.currentSlot]
+end
+
+function WeaponSystem:getInventory()
+    return self.inventory
+end
+
+function WeaponSystem:getCurrentSlot()
+    return self.currentSlot
+end
+
+function WeaponSystem:getMaxInventory()
+    return self.MAX_INVENTORY
+end
+
+function WeaponSystem:swapToNext()
+    if #self.inventory <= 1 then return end
+    self.currentSlot = self.currentSlot + 1
+    if self.currentSlot > #self.inventory then
+        self.currentSlot = 1
+    end
+end
+
+function WeaponSystem:swapToSlot(slot)
+    if slot >= 1 and slot <= #self.inventory then
+        self.currentSlot = slot
+    end
 end
 
 function WeaponSystem:drawHUD()
-    local weapon = self.currentWeapon
+    local weapon = self:getCurrentWeapon()
+    if not weapon then return end
     local padding = 10
     local hudX = padding
     local hudY = padding
@@ -264,12 +306,12 @@ function WeaponSystem:drawHUD()
 end
 
 function WeaponSystem:drawPickups()
+    local camX = self.cameraX or 0
     for _, pickup in ipairs(self.pickups) do
-        local screenX = pickup.x - self.cameraX
-        if screenX < -50 or screenX > self.screenWidth + 50 then
+        local screenX = pickup.x - camX
+        if screenX < -100 or screenX > self.screenWidth + 100 then
             goto continue
         end
-        
         local y = pickup.y + math.sin(pickup.bobOffset) * 5
         
         love.graphics.setColor(0, 0, 0, 0.4)
@@ -288,7 +330,6 @@ function WeaponSystem:drawPickups()
         love.graphics.setColor(1, 1, 1, 0.8)
         love.graphics.setFont(love.graphics.newFont(10))
         love.graphics.printf(pickup.weapon.name, screenX - 10, y + pickup.height + 5, pickup.width + 20, "center")
-        
         ::continue::
     end
 end
@@ -313,7 +354,21 @@ function WeaponSystem:reset()
     self.projectiles = {}
     self.pickups = {}
     self.pickupSpawnTimer = 0
-    self.currentWeapon = self:generateRandomWeapon()
+    if #self.inventory == 0 then
+        table.insert(self.inventory, self:generateRandomWeapon())
+        self.currentSlot = 1
+    end
+    self.lastFireTime = 0
+end
+
+function WeaponSystem:fullReset()
+    self.projectiles = {}
+    self.pickups = {}
+    self.pickupSpawnTimer = 0
+    self.inventory = {}
+    local startingWeapon = self:generateRandomWeapon()
+    table.insert(self.inventory, startingWeapon)
+    self.currentSlot = 1
     self.lastFireTime = 0
 end
 
