@@ -154,23 +154,28 @@ function EnemySystem:spawnEnemy(x, y, forceType)
 end
 
 function EnemySystem:spawnRandomEnemy()
+    local camX = self.cameraX or 0
     local edge = math.random(1, 4)
     local x, y
     local padding = 50
+    local viewLeft = camX
+    local viewRight = camX + self.screenWidth
     
     if edge == 1 then
-        x = math.random(padding, self.screenWidth - padding)
-        y = padding
+        x = math.random(viewLeft + padding, viewRight - padding)
+        y = viewLeft + padding
     elseif edge == 2 then
-        x = self.screenWidth - padding
+        x = viewRight - padding
         y = math.random(padding, self.screenHeight - padding)
     elseif edge == 3 then
-        x = math.random(padding, self.screenWidth - padding)
+        x = math.random(viewLeft + padding, viewRight - padding)
         y = self.screenHeight - padding
     else
-        x = padding
+        x = viewLeft + padding
         y = math.random(padding, self.screenHeight - padding)
     end
+    
+    x = math.max(self.levelStart, math.min(self.levelEnd - 50, x))
     
     local typeIndex = math.random(1, #ENEMY_TYPES)
     return self:spawnEnemy(x, y, typeIndex)
@@ -222,7 +227,7 @@ function EnemySystem:update(dt, player, platforms)
         enemy.x = enemy.x + enemy.velocityX * dt
         enemy.y = enemy.y + enemy.velocityY * dt
         
-        enemy.x = math.max(0, math.min(self.screenWidth - enemy.width, enemy.x))
+        enemy.x = math.max(self.levelStart, math.min(self.levelEnd - enemy.width, enemy.x))
     end
     
     local deadProjectiles = {}
@@ -233,7 +238,7 @@ function EnemySystem:update(dt, player, platforms)
         proj.lifetime = proj.lifetime - dt
         
         if proj.lifetime <= 0 or 
-           proj.x < -50 or proj.x > self.screenWidth + 50 or 
+           proj.x < self.levelStart - 50 or proj.x > self.levelEnd + 50 or 
            proj.y < -50 or proj.y > self.screenHeight + 50 then
             table.insert(deadProjectiles, i)
         end
